@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.QuotaMapper">
+	<resultMap type="com.qrhf.pojo.Quota" id="BaseResultMap">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="department_id" property="departmentId" jdbcType="INTEGER" />
+		<result column="user_id" property="userId" jdbcType="INTEGER"/>
+		<result column="linkage_id" property="linkageId" jdbcType="INTEGER"/>
+		<result column="linkage_pid" property="linkagePid" jdbcType="INTEGER"/>
+		<result column="linkage_son_id" property="linkageSonId" jdbcType="INTEGER"/>
+		<result column="name" property="name" jdbcType="VARCHAR"/>
+		<result column="senior_worker" property="seniorWorker" jdbcType="INTEGER"/>
+		<result column="senior_worker_wages" property="seniorWorkerWages" jdbcType="DOUBLE"/>
+		<result column="middle_worker" property="middleWorker" jdbcType="INTEGER"/>
+		<result column="primary_worker_wages" property="primaryWorkerWages" jdbcType="DOUBLE"/>
+		<result column="primary_worker" property="primaryWorker" jdbcType="INTEGER"/>
+		<result column="mechanics" property="mechanics" jdbcType="INTEGER"/>
+		<result column="mechanics_wages" property="mechanicsWages" jdbcType="DOUBLE"/>
+		<result column="wages" property="wages" jdbcType="DOUBLE"/>
+		<result column="workload" property="workload" jdbcType="INTEGER"/>
+		<result column="unit_id" property="unitId" jdbcType="VARCHAR"/>
+		<result column="status" property="status" jdbcType="INTEGER"/>
+		<result column="code" property="code" jdbcType="VARCHAR"/>
+		<result column="create_date" property="createDate" jdbcType="DATE"/>
+		<result column="start_date" property="startDate" jdbcType="DATE"/>
+		<result column="end_date" property="endDate" jdbcType="DATE"/>
+		<result column="region_id" property="regionId" jdbcType="INTEGER"/>
+		<result column="region_pid" property="regionPid" jdbcType="INTEGER"/>
+		<result column="region_son_id" property="regionSonId" jdbcType="INTEGER"/>
+		<result column="region" property="region" jdbcType="VARCHAR"/>
+		<result column="is_valid" property="isValid" jdbcType="INTEGER"/>
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE"/>
+		<result column="num" property="num" jdbcType="INTEGER"/>
+	</resultMap>
+	
+	<sql id="Base_Column_List">
+		id,company_id,department_id,user_id,linkage_id,linkage_pid,
+		linkage_son_id,name,senior_worker,senior_worker_wages,middle_worker,primary_worker_wages,primary_worker,
+		mechanics,mechanics_wages,wages,workload,unit_id,status,code,create_date,start_date,end_date,region_id,region_pid,region_son_id,region,is_valid,is_valid_date,num
+	</sql>
+	<select id="getQuotaById" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT DISTINCT
+		q.id id,
+		lin.`name` linkageId,
+		bb.`name` linkagePid,
+		bbb.`name` linkageSonId,
+		q.`name` name,
+		q.start_date startDateStr,
+		q.end_date endDateStr,
+		re.`name` regionId,
+		aa.`name` regionPid,
+		aaa.`name` regionSonId,
+		q.region region,
+		q.wages wages,
+		q.senior_worker seniorWorker,
+		q.senior_worker_wages seniorWorkerWages,
+		q.primary_worker_wages primaryWorkerWages,
+		q.primary_worker primaryWorker,
+		q.mechanics mechanics,
+		q.mechanics_wages mechanicsWages,
+		q.workload workload,
+		suu.`name` unitName,
+		suu.unit_id unitId
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_pid,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_pid
+		) aa ON aa.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.region_son_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_son_id
+		) aaa ON aaa.id = q.id
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_pid
+		) bb ON bb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.linkage_son_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_son_id
+		) bbb ON bbb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.unit_id,
+		su.`name`,
+		q.id
+		FROM
+		quota q
+		INNER JOIN sys_unit su ON su.id = q.unit_id
+		) suu ON suu.id = q.id
+		WHERE
+		q.is_valid=1 AND
+		q.id = #{id}
+	</select>
+	<select id="getListQuotaId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT DISTINCT
+		q.id id,
+		bb.`name` linkageName,
+		q.`name` name,	
+		concat(
+		re.`name`,
+		'',
+		aa.`name`,
+		'',
+		aaa.`name`,
+		'',
+		q.region
+		) region,
+		q.senior_worker seniorWorker,
+		q.senior_worker_wages seniorWorkerWages,
+		q.primary_worker_wages primaryWorkerWages,
+		q.primary_worker primaryWorker,
+		q.mechanics mechanics,
+		q.mechanics_wages mechanicsWages,
+		q.create_date createDate,
+		CONCAT(q.workload, suu.`name`) workloadUnit,
+		CONCAT(q.senior_worker * q.senior_worker_wages + q.primary_worker_wages * q.primary_worker + q.mechanics * q.mechanics_wages, "元","/",
+		q.workload,suu.`name`,"天") organicQuota
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_pid
+		) aa ON aa.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_son_id
+		) aaa ON aaa.id = q.id
+		INNER JOIN linkage lin ON lin.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		) bb ON bb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.unit_id,
+		su.`name`,
+		q.id
+		FROM
+		quota q
+		INNER JOIN sys_unit su ON su.id = q.unit_id
+		) suu ON suu.id = q.id
+		WHERE
+		q.is_valid=1 AND
+		q.id = #{id}
+	</select>
+	<select id="findList" resultType="com.qrhf.pojo.Quota" parameterType="Map">
+		SELECT DISTINCT
+		q.id id,
+		q.`name` NAME,
+		q.senior_worker seniorWorker,
+		q.senior_worker_wages seniorWorkerWages,
+		q.primary_worker_wages primaryWorkerWages,
+		q.primary_worker primaryWorker,
+		q.mechanics mechanics,
+		q.mechanics_wages mechanicsWages,
+		q.create_date createDate,
+		q.workload workload,
+		CONCAT(q.workload, suu.`name`) workloadUnit,
+		CONCAT(q.senior_worker * q.senior_worker_wages + q.primary_worker_wages * q.primary_worker + q.mechanics * q.mechanics_wages, "元","/",
+		q.workload,suu.`name`,"/天") organicQuota,
+		CONCAT(q.workload/(q.senior_worker * q.senior_worker_wages + q.primary_worker_wages * q.primary_worker + q.mechanics * q.mechanics_wages),"元","/",suu.`name`) unitPrice,
+		concat(
+		lin.`name`,
+		'-',
+		bb.`name`,
+		'-',
+		bbb.`name`
+		) linkageName,
+		concat(
+		re.`name`,
+		'',
+		aa.`name`,
+		'',
+		aaa.`name`,
+		'',
+		q.region
+		) region,
+		q.num num
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_pid,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_pid
+		) aa ON aa.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.region_son_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_son_id
+		) aaa ON aaa.id = q.id
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_pid
+		) bb ON bb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.linkage_son_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_son_id
+		) bbb ON bbb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.unit_id,
+		su.`name`,
+		q.id
+		FROM
+		quota q
+		INNER JOIN sys_unit su ON su.id = q.unit_id) suu ON suu.id = q.id
+		WHERE
+		q.is_valid = 1
+		AND q.company_id = #{companyId}
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="findAll" resultType="com.qrhf.pojo.Quota" parameterType="Map">
+		SELECT DISTINCT
+		q.id id,
+		q.`name` NAME,
+		q.linkage_id,
+		q.senior_worker seniorWorker,
+		q.senior_worker_wages seniorWorkerWages,
+		q.primary_worker_wages primaryWorkerWages,
+		q.primary_worker primaryWorker,
+		q.mechanics mechanics,
+		q.mechanics_wages mechanicsWages,
+		q.create_date createDate,
+		q.workload workload,
+		CONCAT(q.workload, suu.`name`) workloadUnit,
+		CONCAT(q.senior_worker * q.senior_worker_wages + q.primary_worker_wages * q.primary_worker + q.mechanics * q.mechanics_wages, "元","/",
+		q.workload,suu.`name`,"/天") organicQuota,
+		bb.`name` linkageName,
+		concat(
+		re.`name`,
+		'',
+		aa.`name`,
+		'',
+		aaa.`name`,
+		'',
+		q.region
+		) region,
+		q.num num
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_pid
+		) aa ON aa.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		re. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN region re ON re.id = q.region_son_id
+		) aaa ON aaa.id = q.id
+		INNER JOIN linkage lin ON lin.id = q.region_id
+		LEFT JOIN (
+		SELECT
+		q.region_id,
+		lin. NAME,
+		q.id
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		) bb ON bb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.unit_id,
+		su.`name`,
+		q.id
+		FROM
+		quota q
+		INNER JOIN sys_unit su ON su.id = q.unit_id
+		) suu ON suu.id = q.id
+		WHERE
+		q.is_valid = 1
+		<if test="quotaName!=null">
+			and linkage_id like #{quotaName}
+		</if>
+		<if test="workload!=null">
+			and workload like #{workload}
+		</if>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="quotaAll" resultType="com.qrhf.pojo.QuotaStatistics" parameterType="Map">
+		SELECT DISTINCT
+		GROUP_CONCAT("'", q.`name`, "'") `name`,
+		GROUP_CONCAT(CONCAT("'", bb.`name`,"(单位：",suu.`name`,")","'")) linkageCount,
+		GROUP_CONCAT(
+			IFNULL(CONCAT(
+				q.senior_worker * q.senior_worker_wages + q.primary_worker_wages * q.primary_worker + q.mechanics * q.mechanics_wages),
+				0
+			)
+		) wages,
+	   GROUP_CONCAT(
+			IFNULL(
+		CONCAT(
+				 q.workload),
+				0
+			)
+		) workload
+		FROM
+		quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		LEFT JOIN (
+		SELECT
+			q.linkage_id,
+			lin. NAME,
+			q.id
+		FROM
+			quota q
+		INNER JOIN linkage lin ON lin.id = q.linkage_id
+		) bb ON bb.id = q.id
+		LEFT JOIN (
+		SELECT
+		q.unit_id,
+		su.`name`,
+		q.id
+		FROM
+		quota q
+		INNER JOIN sys_unit su ON su.id = q.unit_id
+		) suu ON suu.id = q.id
+		WHERE
+		q.is_valid = 1
+<!-- 		AND q.linkage_id IN ( -->
+<!-- 		SELECT -->
+<!-- 		lin.id -->
+<!-- 		FROM -->
+<!-- 		linkage lin -->
+<!-- 		WHERE -->
+<!-- 		lin.id=#{linkageId} -->
+<!-- 		) -->
+	</select>
+	<insert id="saveQuota" parameterType="com.qrhf.pojo.Quota">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			select
+			LAST_INSERT_ID()
+		</selectKey>
+			INSERT INTO quota (
+				company_id,
+				department_id,
+				user_id,
+				linkage_id,
+				linkage_pid,
+				linkage_son_id,
+				name,
+				senior_worker,
+				senior_worker_wages,
+				middle_worker,
+				primary_worker_wages,
+				primary_worker,
+				mechanics,
+				mechanics_wages,
+				wages,
+				workload,
+				unit_id,
+				STATUS,
+				CODE,
+				create_date,
+				start_date,
+				end_date,
+				region_id,
+				region_pid,
+				region_son_id,
+				region,
+				is_valid,
+				is_valid_date,
+				num
+			)
+			VALUES
+				(	
+					#{companyId},
+					#{departmentId},	
+					#{userId},
+					#{linkageId},
+					#{linkagePid},
+					#{linkageSonId},
+					#{name},
+					<if test="seniorWorker == null">
+						0,
+					</if>
+					<if test="seniorWorker != null">
+						#{seniorWorker},
+					</if>
+					<if test="seniorWorkerWages == null">
+						0,
+					</if>
+					<if test="seniorWorkerWages != null">
+						#{seniorWorkerWages},
+					</if>
+					#{middleWorker},
+					<if test="primaryWorkerWages == null">
+						0,
+					</if>
+					<if test="primaryWorkerWages != null">
+						#{primaryWorkerWages},
+					</if>
+					<if test="primaryWorker == null">
+						0,
+					</if>
+					<if test="primaryWorker != null">
+						#{primaryWorker},
+					</if>
+					<if test="mechanics == null">
+						0,
+					</if>
+					<if test="mechanics != null">
+						#{mechanics},
+					</if>
+					<if test="mechanicsWages == null">
+						0,
+					</if>
+					<if test="mechanicsWages != null">
+						#{mechanicsWages},
+					</if>
+					#{wages},
+					#{workload},
+					#{unitId},
+					#{status},
+					#{code},
+					CURDATE(),
+					#{startDate},
+					#{endDate},
+					#{regionId},
+					#{regionPid},
+					#{regionSonId},
+					#{region},
+					1,
+					#{isValidDate},
+					1
+				)
+	</insert>
+	<update id="del" parameterType="java.lang.Integer">
+		UPDATE quota SET is_valid=0 WHERE id=#{id}	
+	</update>
+	<update id="updateById" parameterType="java.lang.Integer">
+		UPDATE quota SET num=num+1 WHERE id=#{id}
+	</update>
+	<update id="updateQuota" parameterType="com.qrhf.pojo.Quota">
+		UPDATE quota 
+		<set>
+			<if test="companyId != null">
+				company_id = #{companyId,jdbcType=INTEGER},
+			</if>
+			<if test="departmentId != null">
+				department_id = #{departmentId,jdbcType=INTEGER},
+			</if>
+			<if test="userId != null">
+				user_id = #{userId,jdbcType=INTEGER},
+			</if>
+			<if test="linkageId != null">
+				linkage_id = #{linkageId,jdbcType=INTEGER},
+			</if>
+			<if test="linkagePid != null">
+				linkage_pid = #{linkagePid,jdbcType=INTEGER},
+			</if>
+			<if test="linkageSonId != null">
+				linkage_son_id = #{linkageSonId,jdbcType=INTEGER},
+			</if>
+			<if test="linkageSonId != null">
+				linkage_son_id = #{linkageSonId,jdbcType=INTEGER},
+			</if>
+			<if test="name != null">
+				name = #{name,jdbcType=INTEGER},
+			</if>
+			<if test="seniorWorker != null">
+				senior_worker = #{seniorWorker,jdbcType=INTEGER},
+			</if>
+			<if test="seniorWorker == null">
+			 	senior_worker=0,
+			</if>
+			<if test="seniorWorkerWages != null">
+				senior_worker_wages = #{seniorWorkerWages,jdbcType=INTEGER},
+			</if>
+			<if test="seniorWorkerWages == null">
+			 	senior_worker_wages=0,
+			</if>
+			<if test="middleWorker != null">
+				middle_worker = #{middleWorker,jdbcType=INTEGER},
+			</if>
+			<if test="primaryWorkerWages != null">
+				primary_worker_wages = #{primaryWorkerWages,jdbcType=INTEGER},
+			</if>
+			<if test="primaryWorkerWages == null">
+			 	primary_worker_wages=0,
+			</if>
+			<if test="primaryWorker != null">
+				primary_worker = #{primaryWorker,jdbcType=INTEGER},
+			</if>
+			<if test="primaryWorker == null">
+			 	primary_worker=0,
+			</if>
+			<if test="mechanics != null">
+				mechanics = #{mechanics,jdbcType=INTEGER},
+			</if>
+			<if test="mechanics == null">
+			 	mechanics=0,
+			</if>
+			<if test="mechanicsWages != null">
+				mechanics_wages = #{mechanicsWages,jdbcType=INTEGER},
+			</if>
+			<if test="mechanicsWages == null">
+			 	mechanics_wages=0,
+			</if>
+			<if test="wages != null">
+				wages = #{wages,jdbcType=INTEGER},
+			</if>
+			<if test="workload != null">
+				workload = #{workload,jdbcType=INTEGER},
+			</if>
+			<if test="unitId != null">
+				unit_id = #{unitId,jdbcType=INTEGER},
+			</if>
+			<if test="status != null">
+				status = #{status,jdbcType=INTEGER},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=INTEGER},
+			</if>
+			<if test="createDate != null">
+				create_date = #{createDate,jdbcType=INTEGER},
+			</if>
+			<if test="startDate != null">
+				start_date = #{startDate,jdbcType=INTEGER},
+			</if>
+			<if test="endDate != null">
+				end_date = #{endDate,jdbcType=INTEGER},
+			</if>
+			<if test="regionId != null">
+				region_id = #{regionId,jdbcType=INTEGER},
+			</if>
+			<if test="regionPid != null">
+				region_pid = #{regionPid,jdbcType=INTEGER},
+			</if>
+			<if test="regionSonId != null">
+				region_son_id = #{regionSonId,jdbcType=INTEGER},
+			</if>
+			<if test="region != null">
+				region = #{region,jdbcType=INTEGER},
+			</if>
+			<if test="isValidDate != null">
+				is_valid_date = #{isValidDate,jdbcType=INTEGER}
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+</update>
+</mapper>

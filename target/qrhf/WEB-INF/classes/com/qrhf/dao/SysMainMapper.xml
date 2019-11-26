@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SysMainMapper">
+
+	<sql id="Base_Column_List">
+		id id,
+		project_order_id projectOrderId,
+		title title,
+		reject_reason rejectReason,
+		status status,
+		buyer_id buyerId,
+		manager_id managerId,
+		create_date createDate,
+		process_date processDate
+	</sql>
+	
+	<select id="findNotPassProjectOrder" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT DISTINCT
+			sf.id AS id,
+			sf.project_id projectId,
+			sf.project_order_id projectOrderId,
+			sf.process_date processDate,
+			po.`name` name
+		FROM
+			sys_flow sf,
+			project_order po,
+			project_order_goods pog
+		WHERE
+			pog. STATUS != 0
+		AND pog.is_valid = 1
+		AND po.is_valid = 1
+		AND sf.project_order_id = pog.project_order_id
+		AND sf.project_order_id = po.id
+		AND sf.buyer_id = #{userId}
+		AND sf.`status` = -3
+		
+	</select>
+	
+	<select id="findSysFlowList" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		select 
+			po.project_id projectId,
+			sf.id id,
+			sf.project_order_id projectOrderId,
+			sf.title title,
+			sf.reject_reason rejectReason,
+			sf.create_date createDate,
+			sf.process_date processDate,
+			sf.`status` status,
+			con. NAME
+		from 
+			project_order po,
+			sys_flow sf,
+			contract con
+		where
+			sf.type=1 AND 
+			sf.project_order_id = po.id
+		AND con.id = po.contract_id
+		and ((sf.status = 0 and sf.manager_id = #{userId}) OR (sf.status = -1 and buyer_id = #{userId}))
+	</select>
+	
+	<select id="showAllTable" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			po.project_id projectId,
+			sf.id id,
+			sf.project_order_id projectOrderId,
+			sf.title title,
+			sf.reject_reason rejectReason,
+			sf.create_date createDate,
+			sf.process_date processDate,
+			sf.`status` STATUS,
+			con. NAME
+		FROM
+			project_order po,
+			sys_flow sf,
+			project p,
+			contract con
+		WHERE
+			po.project_id = p.id
+		AND p.company_id = #{companyId}
+		AND sf.project_order_id = po.id
+		AND sf.type = 1
+		AND (sf. STATUS = 0 or sf. STATUS = 2)
+		AND con.id = po.contract_id
+	</select>
+	
+	
+	<select id="findSKBSysFlowList" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			id,
+			project_id projectId,
+			title,
+			reject_reason rejectReason
+		FROM
+			sys_flow sf
+		WHERE
+			sf. STATUS = 0
+		AND sf.type=2
+		AND sf.manager_id = #{userId}
+	</select>
+	
+	<!-- <select id="findSKB" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			sf.id,
+			u.user_name name,
+			sf.project_id projectId,
+			sf.title,
+			sf.reject_reason rejectReason,
+			sf.create_date createDate,
+			sf. STATUS
+		FROM
+			USER u,
+			sys_flow sf
+		WHERE
+			sf.type = 2
+		AND sf.status = 0
+		AND u.id = sf.buyer_id
+		AND sf.manager_id = #{userId}
+	</select> -->
+	
+	<select id="findProject" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			sf.id,
+			u.user_name NAME,
+			sf.project_id projectId,
+			sf.project_update_id projectUpdateId,
+			sf.title,
+			sf.reject_reason rejectReason,
+			sf.create_date createDate,
+			sf. STATUS,
+			(select count(*) from consultation where sys_flow_id = sf.id) num
+		FROM
+			USER u,
+			sys_flow sf,
+			project_update_goods pug
+		WHERE
+			sf.type = 2
+		AND u.id = sf.buyer_id
+		and sf.project_update_id = pug.project_update
+		AND (
+			(sf. STATUS = 0 AND sf.manager_id = #{userId})
+			OR (sf.STATUS = -1 AND sf.buyer_id = #{userId})
+		)
+		GROUP BY pug.project_update
+	</select>
+	
+<!-- 	
+	<select id="findRejectSKB" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			sf.id,
+			u.user_name name,
+			sf.project_id projectId,
+			sf.title,
+			sf.reject_reason rejectReason,
+			sf.create_date createDate,
+			sf.status
+		FROM
+			sys_flow sf
+		WHERE sf.type=2 
+		AND sf.buyer_id = #{userId}
+	</select> -->
+	
+	<select id="findProjectOrderSubmitAgain" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			sf.id AS id,
+			sf.project_id AS projectId,
+			sf.project_order_id AS projectOrderId,
+			po.`name` AS title,
+			con. NAME NAME
+		FROM
+			sys_flow AS sf
+		INNER JOIN project_order AS po ON sf.project_order_id = po.id
+		INNER JOIN contract con ON po.contract_id = con.id
+		WHERE
+			sf.`status` = 2
+		AND po.is_valid = 1
+		AND sf.manager_id = #{userId}
+	</select>
+	
+	<select id="uploadNotice" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			id,
+			title,
+			create_date createDate
+		FROM
+			sys_flow
+		WHERE buyer_id = #{userId} and type = 3
+	</select>
+	
+	<select id="unconfirmedCGB" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			id,
+			title,
+			project_order_id projectOrderId,
+			project_id projectId
+		FROM
+			sys_flow
+		WHERE
+			buyer_id = #{userId}	
+		AND `status` = - 2
+	</select>
+	
+	<select id="deleteProjectOrderNotice" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+			SELECT
+				sf.id,
+				sf.title,
+				u.user_name name,
+				sf.create_date createDate
+			FROM
+				sys_flow sf,
+				USER u
+			WHERE
+				manager_id = #{userId}	
+			AND type = 3
+			AND sf.buyer_id = u.id
+			AND u.department_id = (
+				SELECT
+					department_id
+				FROM
+					USER
+				WHERE
+					id = #{userId}	
+			)
+	</select>
+	
+	<select id="findExpiryDate" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		select id,buyer_id,title from sys_flow where buyer_id = #{userId} and type = 4
+	</select>
+	<select id="findTemporaryBatch" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		select
+		sf.id,
+		sf.buyer_id,
+		(select user_name from user u where u.id = sf.buyer_id) userName,
+		(select name from project p where p.id = sf.project_id) projectName,
+		sf.title title,
+		sf.create_date createDate
+		from
+		sys_flow sf
+		where
+		sf.status = 6
+		and sf.type=6
+		and sf.company_id = #{companyId}
+	</select>
+	<select id="selectTemporaryBatch" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		select sf.id id,sf.project_id projectId,sf.buyer_id,sf.title,(select name from project p where p.id = sf.project_id) projectName from sys_flow sf where sf.buyer_id =#{userId} and sf.`status` =8 AND sf.type =6
+	</select>
+	<select id="deleteTemporaryBatch" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.SysFlow">
+		SELECT
+			sf.id,
+			sf.buyer_id,
+			sf.title,
+			(
+				SELECT
+					NAME
+				FROM
+					project p
+				WHERE
+					p.id = sf.project_id
+			) projectName,
+		sf.process_date processDate 
+		FROM
+			sys_flow sf
+		WHERE
+			sf.buyer_id = #{userId} and sf.`status` =7 AND sf.type =6
+	</select>
+	<select id="findApplyExpiryDate" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ApplyExpiryDate">
+		SELECT aed.id id ,aed.reason reason,aed.type type,(select name from company c where c.id = aed.company_id) companyName FROM apply_expiry_date aed WHERE aed.company_id =#{companyId} AND aed.status=-1 AND aed.type=-1
+	</select>
+	<select id="findConsultation" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.Consultation">
+		select c.id id,c.sys_flow_id sysFlowId,c.user_id userId,c.title title,c.status status,c.create_date createDate,sf.project_id projectId,sf.project_update_id projectUpdateId from consultation c,sys_flow sf where c.user_id = #{userId} and c.status = 0 and c.sys_flow_id = sf.id and sf.status = 0
+	</select>
+</mapper>

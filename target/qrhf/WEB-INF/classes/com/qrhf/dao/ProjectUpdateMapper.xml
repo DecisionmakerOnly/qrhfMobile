@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectUpdateMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.ProjectUpdate">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project" property="project" jdbcType="INTEGER" />
+		<result column="update_type" property="updateType" jdbcType="INTEGER" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,project project,update_type updateType,create_date createDate,is_valid isValid,is_valid_date isValidDate
+	</sql>
+	
+	<insert id="saveProjectUpdate" parameterType="com.qrhf.pojo.ProjectUpdate">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into project_update (
+			project,create_date,is_valid
+		)
+		values (
+			#{project},NOW(),0
+		)
+	</insert>
+	
+	<update id="updateProjectUpdate" parameterType="com.qrhf.pojo.ProjectUpdate">
+		update
+			project_update
+		set
+			code = CONCAT(#{codeTitle},#{code}),
+			update_type = #{updateType}
+		where
+			id = #{id}
+	</update>
+	<select id="findProjectUpdateByCode" parameterType="java.lang.String" resultType="com.qrhf.pojo.ProjectUpdate">
+		select 
+			pu.id id,
+			pu.project project,
+			pu.update_type updateType,
+			pu.code code,
+			pu.create_date createDate
+		from
+			project_update pu
+		where 
+			pu.code = #{code}
+	</select>
+	<select id="findProjectUpdateById" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ProjectUpdate">
+		select 
+			pu.id id,
+			pu.project project,
+			pu.update_type updateType,
+			pu.code code,
+			pu.create_date createDate
+		from
+			project_update pu
+		where 
+			pu.id = #{projectUpdateId}
+	</select>
+	<select id="findProjectUpdateBatches" resultType="com.qrhf.pojo.ProjectUpdate" parameterType="java.lang.Integer">
+		select <include refid="Base_Column_List" /> FROM project_update pu WHERE pu.project=#{projectId} AND pu.update_type=#{updateType} AND pu.is_valid=1 ORDER BY pu.create_date ASC
+	</select> 
+	<delete id="deletePuProjectId" parameterType="java.lang.Integer">
+		delete from project_update where project=#{projectId}
+	</delete>
+	<update id="updateAll" parameterType="java.lang.Integer">
+		update
+			project_update
+		set
+			is_valid = 1
+		where
+			id = #{projectUpdateId}
+	</update>
+</mapper>

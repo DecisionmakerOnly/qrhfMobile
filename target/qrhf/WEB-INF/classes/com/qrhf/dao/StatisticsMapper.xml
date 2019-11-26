@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.StatisticsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Statistics">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="name" property="name" jdbcType="VARCHAR"/>
+	</resultMap>
+	<sql id="Base_Columu_List">
+		id id,name name
+	</sql>
+	
+	<select id="statistics" resultType="com.qrhf.pojo.ProjectStatistics" parameterType="Map">
+		SELECT
+			po.create_date createDate,
+			pog.price
+		FROM
+			project_order po
+		LEFT JOIN project_order_goods pog 
+		ON po.project_id = pog.project_id
+		WHERE
+			po.project_id = #{projectId}
+			AND pog.project_order_id = po.id
+		<if test="(startDate!=''and startDate!=null) and endDate!=''and endDate!=null">
+		 	AND po.create_date BETWEEN #{startDate} AND #{endDate}
+		</if>
+		<if test="goodsId!=''and goodsId!=null">
+		 	AND pog.goods_id = #{goodsId}
+		</if>
+		
+	</select>
+	<select id="findList" resultType="com.qrhf.pojo.Statistics" parameterType="Map">
+		
+			SELECT
+				pog.id id,
+				pog.goods_id goodsId,
+				pog.as_NAME NAME,
+				pg.amount controlAmount,
+				pog.amount orderAmount,
+				pg.amount - pog.amount quantityGap,
+				concat(ROUND(pog.amount / pg.amount * 100, 2),"%") quantityRatio,
+				pogs.price controlTotal,
+				pog.total orderTotal,
+				pogs.price - pog.total totalGap,
+				concat(ROUND(pog.total / pogs.price * 100, 2),"%") capitalRatio
+			FROM
+				(
+					SELECT
+						pog.id,
+						pog.as_name,
+						pog.project_order_id,
+						pog.`status`,
+						sum(pog.amount) amount,
+						sum(pog.total) total,
+						pog.goods_id,
+						pog.project_id,
+						pog.project_goods_price pgPrice
+					FROM
+						project_order_goods pog,
+						sys_flow sf,
+						project_order po
+					WHERE
+						pog.project_id = #{projectId,jdbcType=INTEGER}
+					AND pog.`status` = 0
+					AND sf.project_order_id = pog.project_order_id
+					AND sf.`status` = 1
+					AND pog.project_id = po.project_id
+					AND pog.project_order_id = po.id
+					<if test="(startDate!=''and startDate!=null) and endDate!=''and endDate!=null">
+					 	AND po.create_date BETWEEN #{startDate} AND #{endDate}
+					</if>
+					<if test="name!=''and name!=null">
+					<bind name="name" value="'%'+name+'%'"/>
+					 	and pog.as_name like #{name}
+					</if>
+					GROUP BY
+						pog.goods_id
+				) pog
+			LEFT JOIN project_goods pg ON pog.goods_id = pg.goods_id
+			AND pog.project_id = pg.project_id
+			LEFT JOIN (
+				SELECT
+					pg.goods_id goodsId,
+					((pg.amount - pog.amount) * pg.price) + pog.total price
+				FROM
+					project_goods pg,
+					(
+						SELECT
+							as_name,
+							pog.goods_id goods_id,
+							sum(pog.amount) amount,
+							sum(
+								pog.amount * pog.project_goods_price
+							) total
+						FROM
+							project_order_goods pog
+						WHERE
+							pog.project_order_id IN (
+								SELECT
+									sf.project_order_id
+								FROM
+									sys_flow sf
+								WHERE
+									sf. STATUS = 1
+								AND sf.project_id = #{projectId,jdbcType=INTEGER}
+							)
+						GROUP BY
+							pog.goods_id
+					) pog
+				WHERE
+					pg.project_id = #{projectId,jdbcType=INTEGER}
+				AND pg.goods_id = pog.goods_id
+			) pogs ON pog.goods_id = pogs.goodsId
+			
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="amountStatistics" resultType="com.qrhf.pojo.ProjectStatistics"
+		parameterType="map">
+		SELECT
+			pog.as_name NAME,
+			IFNULL(sum(pog.amount), 0) orderAmount,
+			IFNULL(pg.amount, 0) projectAmount
+		FROM
+			project_order_goods pog,
+			project_goods pg,
+			project_order po
+		WHERE
+			pog.project_id = #{projectId,jdbcType=INTEGER}
+		AND pog.`status` = 0
+		AND pog.goods_id = pg.goods_id
+		AND pog.project_id = pg.project_id
+		AND pog.project_order_id = po.id
+		<if test="(startDate!=''and startDate!=null) and (endDate!=''and endDate!=null)">
+		 	AND po.create_date BETWEEN #{startDate} AND #{endDate}
+		</if>
+		<if test="name!=''and name!=null">
+		<bind name="name" value="'%'+name+'%'"/>
+		 	and pog.as_name like #{name}
+		</if>
+		GROUP BY
+			pog.goods_id
+	</select>
+	
+	<select id="priceStatistics" resultType="com.qrhf.pojo.ProjectStatistics"
+		parameterType="map">
+		
+		SELECT
+			pog.as_name name,
+			pogs.price projectPrice,
+			pog.total orderPrice
+		FROM
+			(
+				SELECT
+					pog.as_name,
+					pog.project_order_id,
+					pog.`status`,
+					sum(pog.total) total,
+					pog.goods_id,
+					pog.project_id
+				FROM
+					project_order_goods pog,
+					sys_flow sf,
+					project_order po
+				WHERE
+					pog.project_id = #{projectId,jdbcType=INTEGER}
+				AND pog.`status` = 0
+				AND sf.project_order_id = pog.project_order_id
+				AND sf.`status` = 1
+				AND pog.project_id = po.project_id
+				AND pog.project_order_id = po.id
+				<if test="(startDate!=''and startDate!=null) and endDate!=''and endDate!=null">
+				 	AND po.create_date BETWEEN #{startDate} AND #{endDate}
+				</if>
+				<if test="name!=''and name!=null">
+				<bind name="name" value="'%'+name+'%'"/>
+				 	and pog.as_name like #{name}
+				</if>
+				GROUP BY
+					pog.goods_id
+			) pog
+		LEFT JOIN project_goods pg ON pog.goods_id = pg.goods_id
+		AND pog.project_id = pg.project_id
+		LEFT JOIN (
+			SELECT
+				pg.goods_id goodsId,
+				((pg.amount - pog.amount) * pg.price) + pog.total price
+			FROM
+				project_goods pg,
+				(
+					SELECT
+						as_name,
+						pog.goods_id goods_id,
+						sum(pog.amount) amount,
+						sum(pog.amount * pog.project_goods_price) total
+					FROM
+						project_order_goods pog
+					WHERE
+						pog.project_order_id IN (
+							SELECT
+								sf.project_order_id
+							FROM
+								sys_flow sf
+							WHERE
+								sf. STATUS = 1
+							AND sf.project_id = #{projectId,jdbcType=INTEGER}
+						)
+					GROUP BY
+						pog.goods_id
+				) pog
+			WHERE
+				pg.project_id = #{projectId,jdbcType=INTEGER}
+			AND pg.goods_id = pog.goods_id
+		) pogs ON pog.goods_id = pogs.goodsId
+	</select>
+	
+	<select id="fundsStatistics" resultType="com.qrhf.pojo.Statistics"
+		parameterType="map">
+			SELECT
+				pg.total controlTotal,
+				((pg.amount - pog.amount)* pg.price) + (pog.amount * pog.project_goods_price) totalGap,
+				pogs.total orderTotal
+			FROM
+				project_goods pg
+			LEFT JOIN project_order_goods pog ON pg.project_id = pog.project_id
+			AND pg.goods_id = pog.goods_id,
+			 (
+				SELECT
+					pog.project_id,
+					sum(pog.total) total
+				FROM
+					project_order_goods pog,
+					project_order po
+				WHERE
+					pog.project_id = #{projectId,jdbcType=INTEGER}
+				AND pog.project_id = po.project_id
+				AND pog.project_order_id = po.id
+				<if test="(startDate!=''and startDate!=null) and endDate!=''and endDate!=null">
+			 		AND po.create_date BETWEEN #{startDate} AND #{endDate}
+				</if>
+			) pogs
+			WHERE
+				pg.project_id = #{projectId,jdbcType=INTEGER}
+			AND pg.project_id = pogs.project_id
+			GROUP BY
+				pg.goods_id
+		</select>
+	
+</mapper>

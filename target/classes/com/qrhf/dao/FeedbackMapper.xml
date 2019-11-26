@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.FeedbackMapper">
+	<resultMap type="com.qrhf.pojo.Feedback" id="BaseResultMap">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="company_id" property="companyId" jdbcType="INTEGER"/>
+		<result column="user_id" property="userId" jdbcType="INTEGER"/>
+		<result column="opinion" property="opinion" jdbcType="VARCHAR"/>
+		<result column="is_valid" property="isValid" jdbcType="INTEGER"/>
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,company_id companyId,user_id userId,opinion opinion,is_valid isValid,is_valid_date isValidDate
+	</sql>
+	<select id="findFeedback" resultType="com.qrhf.pojo.Feedback" parameterType="Map">
+		SELECT
+			fd.id id,
+			u.user_name userName,
+			c.name companyName,
+			fd.sys_resource_name sysResourceName,
+			fd.opinion opinion,
+			fd.create_date createDate
+		FROM
+			feedback fd
+			INNER JOIN `user` u ON u.id = fd.user_id
+			INNER JOIN company c ON c.id = fd.company_id
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<insert id="saveFeedback">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into feedback 
+			(company_id,user_id,sys_resource_name,opinion,create_date,is_valid)
+		values
+			(#{companyId},#{userId},#{sysResourceName},#{opinion},CURDATE(),1)
+	</insert>
+	
+</mapper>

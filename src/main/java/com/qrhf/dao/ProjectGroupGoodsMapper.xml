@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectGroupGoodsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.ProjectGroupGoods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project_group_id" property="projectGroupId" jdbcType="INTEGER" />
+		<result column="project_id" property="projectId" jdbcType="INTEGER" />
+		<result column="goods_id" property="goodsId" jdbcType="INTEGER" />
+		<result column="price" property="price" jdbcType="DOUBLE" />
+		<result column="amount" property="amount" jdbcType="DOUBLE"/>
+		<result column="total" property="total" jdbcType="DOUBLE"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+			id, project_group_id,project_id,goods_id,price,amount,total
+	</sql>
+	 <delete id="projectGroupGoodsDel" parameterType="java.lang.Integer">
+		delete from project_group_goods where project_id = #{projectId}
+	</delete>
+	<insert id="insertProjectGroupGoods" parameterType="com.qrhf.pojo.ProjectGroupGoods">
+		insert into project_group_goods (project_group_id,project_Id,goods_Id,as_name,price,amount,total)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.projectGroupId},#{item.projectId},#{item.goodsId},#{item.asName},#{item.price},#{item.amount},#{item.total})
+		</foreach>
+	</insert>
+	<select id="findProjectGroupUpdateAmount" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ProjectGroupGoods">
+		SELECT
+			pg.id id,
+			pg.goods_id goodsId,
+			pg.project_id projectId,
+			pg.as_name asName,
+			pg.price price,
+			pg.amount amount,
+			pg.total total,
+			pug.`status`,
+			pug.project_goods_amount projectGoodsAmount,
+			pgg.amount amount2,
+			IFNULL(pog.pogAmount,0)	pogAmount,
+			IFNULL(pggsu.amount,0) surplusAmount,
+			pggsu.project_group_id projectGroupId
+		FROM
+			project_goods pg
+		RIGHT JOIN (
+			SELECT
+				pu.update_type,
+				pug.goods,
+				pug.`status`,
+				pug.project_goods_amount
+			FROM
+				project_update pu,
+				project_update_goods pug
+			WHERE
+				pu.id = #{projectUpdateId}
+			AND pu.id = pug.project_update
+		) pug ON pg.goods_id = pug.goods
+		LEFT JOIN (
+			SELECT
+				pgg.goods_id,
+				pgg.price,
+				pgg.amount,
+				pgg.total 
+			FROM
+				project_group_goods pgg 
+			WHERE
+				pgg.project_group_id = (
+			SELECT
+				pg.id 
+			FROM
+				project_group pg 
+			WHERE
+				pg.project_id =#{projectId}
+				AND pg.is_valid = 1 
+				AND CURDATE( ) BETWEEN pg.start_date 
+				AND pg.end_date 
+				) 
+				) pgg ON pgg.goods_id = pug.goods
+				LEFT JOIN(
+				SELECT
+					pog.goods_id,
+					IFNULL(sum(pog.amount),0) pogAmount
+				FROM
+					project_order_goods pog 
+				WHERE
+					pog.project_order_id IN (
+				SELECT
+					po.id 
+				FROM
+					project_order po,
+					project_group pg 
+				WHERE
+					pg.project_id = po.project_id 
+					AND pg.id = (
+				SELECT
+					pg.id 
+				FROM
+					project_group pg 
+				WHERE
+					pg.project_id = #{projectId}
+					AND pg.is_valid = 1 
+					AND CURDATE( ) BETWEEN pg.start_date 
+					AND pg.end_date 
+					) 
+					AND pg.is_valid = 1 
+					AND po.id IN ( SELECT project_order_id FROM sys_flow WHERE project_id = po.project_id AND STATUS = 1 ) 
+					AND po.create_date BETWEEN (
+				SELECT
+					pg.start_date 
+				FROM
+					project_group pg 
+				WHERE
+					pg.id = (
+				SELECT
+					pg.id 
+				FROM
+					project_group pg 
+				WHERE
+					pg.project_id = #{projectId} 
+					AND pg.is_valid = 1 
+					AND CURDATE( ) BETWEEN pg.start_date 
+					AND pg.end_date 
+					) 
+					) 
+					AND (
+				SELECT
+					pg.end_date 
+				FROM
+					project_group pg 
+				WHERE
+					pg.id = (
+				SELECT
+					pg.id 
+				FROM
+					project_group pg 
+				WHERE
+					pg.project_id = #{projectId}
+					AND pg.is_valid = 1 
+					AND CURDATE( ) BETWEEN pg.start_date 
+					AND pg.end_date 
+					) 
+					) 
+					) 
+					AND pog.is_modify = 0
+					GROUP BY pog.goods_id
+				)pog on pog.goods_id=pug.goods
+				LEFT JOIN (
+					SELECT
+						pgg.goods_id,
+						pgg.price,
+						pgg.amount,
+						pgg.total,
+						pgg.project_group_id
+					FROM
+						project_group_goods pgg 
+					WHERE
+						pgg.project_group_id IN (
+					SELECT
+						pg.id 
+					FROM
+						project_group pg 
+					WHERE
+						pg.is_valid = 1 
+						AND project_id = #{projectId}  
+						AND curdate( ) &lt;= pg.start_date 
+						AND pg.id NOT IN (
+					SELECT
+						pg.id 
+					FROM
+						project_group pg 
+					WHERE
+						pg.is_valid = 1 
+						AND project_id = #{projectId} 
+						AND ( curdate( ) BETWEEN pg.start_date AND pg.end_date ) 
+						) 
+						)
+					)pggsu on pggsu.goods_id=pug.goods
+		WHERE
+			pg.project_id = #{projectId}
+	</select>
+	<update id="updateProjectGroupGoodsUpdate" parameterType="com.qrhf.pojo.ProjectGroupGoods">
+		<foreach collection="list" item="item" separator=";">
+			update 
+				project_group_goods 
+			set 
+				price = #{item.price},amount=#{item.amount},total=#{item.total} 
+			where 
+				project_group_id = #{item.projectGroupId} and goods_id=#{item.goodsId}
+		</foreach>
+	</update>
+	<select id="findProjectGroupUpdateAmountAndPrice" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ProjectGroupGoods">
+		SELECT
+			pg.id id,
+			pg.goods_id goodsId,
+			pg.project_id projectId,
+			pg.as_name asName,
+			pg.price price,
+			pgg.amount amount,
+			pg.total total,
+			pug.`status`,
+			pug.project_goods_amount projectGoodsAmount,
+			pgg.amount amount2,
+			pgg.currentGroup,
+			pgg.project_group_id projectGroupId
+		FROM
+			project_goods pg
+		RIGHT JOIN (
+			SELECT
+				pu.update_type,
+				pug.goods,
+				pug.`status`,
+				pug.project_goods_amount
+			FROM
+				project_update pu,
+				project_update_goods pug
+			WHERE
+				pu.id =#{projectUpdateId}
+			AND pu.id = pug.project_update
+		) pug ON pg.goods_id = pug.goods
+		LEFT JOIN (
+			SELECT
+				pgg.goods_id,
+				pgg.price,
+				pgg.amount,
+				pgg.total,
+				pgg.project_group_id,
+				1 currentGroup
+			FROM
+				project_group_goods pgg 
+			WHERE
+				pgg.project_group_id in (
+			SELECT
+				pg.id 
+			FROM
+				project_group pg 
+			WHERE
+				pg.project_id =#{projectId}
+				AND pg.is_valid = 1 
+				AND   curdate( ) &lt;=  pg.start_date  ) 
+				) pgg ON pgg.goods_id = pug.goods 
+			
+		WHERE
+			pg.project_id =#{projectId}
+	</select>
+<!-- 	<select id="selectProjectGroupSurplusAmount" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ProjectGroupGoods"> -->
+<!-- 		SELECT -->
+<!-- 			pg.id id, -->
+<!-- 			pg.goods_id goodsId, -->
+<!-- 			pg.project_id projectId, -->
+<!-- 			pg.as_name asName, -->
+<!-- 			pg.price price, -->
+<!-- 			pg.amount amount, -->
+<!-- 			pg.total total, -->
+<!-- 			pug.`status`, -->
+<!-- 			pug.project_goods_amount projectGoodsAmount, -->
+<!-- 			pgg.amount surplusAmount, -->
+<!-- 			pgg.project_group_id projectGroupId -->
+<!-- 		FROM  -->
+<!-- 			project_goods pg -->
+<!-- 			RIGHT JOIN ( -->
+<!-- 		SELECT -->
+<!-- 			pu.update_type, -->
+<!-- 			pug.goods, -->
+<!-- 			pug.`status`, -->
+<!-- 			pug.project_goods_amount  -->
+<!-- 		FROM -->
+<!-- 			project_update pu, -->
+<!-- 			project_update_goods pug  -->
+<!-- 		WHERE -->
+<!-- 			pu.id =#{projectUpdateId} -->
+<!-- 			AND pu.id = pug.project_update  -->
+<!-- 			) pug ON pg.goods_id = pug.goods -->
+<!-- 			LEFT JOIN ( -->
+<!-- 			SELECT -->
+<!-- 				pgg.goods_id, -->
+<!-- 				pgg.price, -->
+<!-- 				pgg.amount, -->
+<!-- 				pgg.total, -->
+<!-- 				pgg.project_group_id -->
+<!-- 			FROM -->
+<!-- 				project_group_goods pgg  -->
+<!-- 			WHERE -->
+<!-- 				pgg.project_group_id IN ( -->
+<!-- 			SELECT -->
+<!-- 				pg.id  -->
+<!-- 			FROM -->
+<!-- 				project_group pg  -->
+<!-- 			WHERE -->
+<!-- 				pg.is_valid = 1  -->
+<!-- 				AND project_id =#{projectId} -->
+<!-- 				AND curdate( ) &lt;= pg.start_date  -->
+<!-- 				AND pg.id NOT IN ( -->
+<!-- 			SELECT -->
+<!-- 				pg.id  -->
+<!-- 			FROM -->
+<!-- 				project_group pg  -->
+<!-- 			WHERE -->
+<!-- 				pg.is_valid = 1  -->
+<!-- 				AND project_id =#{projectId}  -->
+<!-- 				AND ( curdate( ) BETWEEN pg.start_date AND pg.end_date )  -->
+<!-- 				)  -->
+<!-- 				) -->
+<!-- 			)pgg on pgg.goods_id=pug.goods -->
+<!-- 	</select> -->
+</mapper>

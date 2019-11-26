@@ -1,0 +1,1110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectOrderGoodsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.ProjectOrderGoods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project_id" property="projectId" jdbcType="INTEGER" />
+		<result column="goods_id" property="goodsId" jdbcType="INTEGER" />
+		<result column="price" property="price" jdbcType="DECIMAL" />
+		<result column="amount" property="amount" jdbcType="DECIMAL" />
+		<result column="total" property="total" jdbcType="DECIMAL" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+		<result column="is_modify" property="isModify" jdbcType="INTEGER" />
+		<result column="as_name" property="asName" jdbcType="VARCHAR"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id, project_id, goods_id, price, amount, total,as_name
+	</sql>
+	<sql id="findGoodsId">
+		(select id from goods where code = #{item.code}
+		and (project_id = 0 or project_id = #{item.projectId}))
+	</sql>
+	<sql id="comparePrice">
+		-1
+	</sql>
+	<update id="updateStatus" parameterType="Map">
+		update project_order_goods set status=0 
+		where project_id = #{projectId,jdbcType=INTEGER}
+		and project_order_id = #{projectOrderId,jdbcType=INTEGER}
+	</update>
+	<select id="getById" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		 SELECT
+			CASE
+			WHEN g. NAME IS NULL THEN
+				pg.as_name
+			ELSE
+				g. NAME
+			END AS NAME,
+			g.id goodsId,
+			pog.as_name asName,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.price price,
+			pog.amount amount,
+			pog.total total,
+			pog. STATUS STATUS,
+			pog.project_order_id projectOrderId
+		FROM
+			project_order_goods pog LEFT JOIN project_goods pg ON pg.goods_id=pog.goods_id AND pg.project_id=pog.project_id AND pg.is_valid=1,
+			goods g
+		WHERE
+			pog.goods_id = g.id
+		AND pog.id =#{projectOrderGoodsId,jdbcType=INTEGER}
+	</select>
+	<select id="selectById" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT
+			g.id goodsId,
+			g. NAME NAME,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.price price,
+			pog.amount amount,
+			pog.total total,
+			pog.status status,
+			pog.project_order_id projectOrderId,
+			sf. STATUS sfStatus
+		FROM
+			project_order_goods pog,
+			goods g,
+			sys_flow sf
+		WHERE
+			pog.goods_id = g.id
+		AND sf.project_order_id = pog.project_order_id
+		AND pog.id = #{projectOrderGoodsId,jdbcType=INTEGER}
+	</select>
+	<update id="deletePOG" parameterType="com.qrhf.pojo.ProjectOrderGoods">
+		update project_order_goods set status = -2 where id = #{projectOrderId,jdbcType=INTEGER}
+	</update>
+	<insert id="insert" parameterType="com.qrhf.pojo.ProjectOrderGoods">
+		insert into
+		project_order_goods (id,
+		project_id, goods_id,
+		price, amount, total,is_valid
+		)
+		values
+		(#{id,jdbcType=INTEGER}, #{projectId,jdbcType=INTEGER},
+		#{goodsId,jdbcType=INTEGER},
+		#{price,jdbcType=DECIMAL},
+		#{amount,jdbcType=DECIMAL}, #{total,jdbcType=DECIMAL},1
+		)
+	</insert>
+	<update id="updateByPrimaryKeySelective" parameterType="com.qrhf.pojo.ProjectOrderGoods">
+		update project_order_goods
+		<set>
+			<if test="projectId != null">
+				project_id = #{projectId,jdbcType=INTEGER},
+			</if>
+			<if test="goodsId != null">
+				goods_id = #{goodsId,jdbcType=INTEGER},
+			</if>
+			<if test="price != null">
+				price = #{price,jdbcType=DECIMAL},
+			</if>
+			<if test="amount != null">
+				amount = #{amount,jdbcType=DECIMAL},
+			</if>
+			<if test="total != null">
+				total = #{total,jdbcType=DECIMAL},
+			</if>
+			<if test="status != null">
+				status = #{status,jdbcType=INTEGER},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	<update id="updateById" parameterType="com.qrhf.pojo.TemporaryProjectGoods">
+		update project_order_goods
+		<set>
+			<if test="price != null">
+				price = #{price,jdbcType=DECIMAL},
+			</if>
+			<if test="amount != null">
+				amount = #{amount,jdbcType=DECIMAL},
+			</if>
+			<if test="total != null">
+				total = (#{amount,jdbcType=DECIMAL}*#{price,jdbcType=DECIMAL}),
+			</if>
+				status = -1,is_modify = 1
+		</set>
+		where id = #{projectOrderGoodsId,jdbcType=INTEGER}
+	</update>
+	<update id="updateByPrimaryKey" parameterType="com.qrhf.pojo.ProjectOrderGoods">
+		update
+		project_order_goods
+		set project_id = #{projectId,jdbcType=INTEGER},
+		goods_id =
+		#{goodsId,jdbcType=INTEGER},
+		price =
+		#{price,jdbcType=DECIMAL},
+		amount =
+		#{amount,jdbcType=DECIMAL},
+		total =
+		#{total,jdbcType=DECIMAL}
+		where id =
+		#{id,jdbcType=INTEGER}
+	</update>
+	<insert id="insertAll" parameterType="com.qrhf.pojo.ProjectOrderGoods">
+		insert into project_order_goods
+			(project_order_id,project_Id,goods_Id,contract_id,as_name,price,amount,total,status,is_valid,is_modify)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(
+			#{item.projectOrderId},#{item.projectId},#{item.goodsId},#{item.contractId},#{item.asName},#{item.price},#{item.amount},#{item.total},<include refid="comparePrice" />,1,1
+			)
+		</foreach>
+	</insert>
+	<update id="updatePriceStatus" parameterType="Map">
+		update project_order_goods pog set pog.status = pog.status+1 where pog.id in (
+			select a.id from (
+				select 
+					pog.id 
+				from 
+					project_goods pg,
+					project_order_goods pog,
+					project_order po
+				where 
+					pog.is_valid = 1
+				and	pog.project_order_id = #{projectOrderId}
+				and pg.project_id = pog.project_id 
+				and pg.goods_id = pog.goods_id 
+				and pog.price &gt; pg.price
+				AND po.is_valid=1
+				AND pg.is_valid=1
+				and pog.status &lt;&gt; -2
+			) a
+		)
+			and pog.is_modify = 1
+	</update>
+	<update id="updateAmountStatus" parameterType="Map">
+		UPDATE project_order_goods
+		SET STATUS = STATUS + 2
+		WHERE
+			project_order_id = #{projectOrderId} 
+		AND goods_id IN (
+			SELECT
+				pog.goods_id
+			FROM
+				(
+					SELECT
+						pg.goods_id,
+						pg.amount - IFNULL(pog.amount, 0) amount
+					FROM
+						(
+							SELECT
+								pg.goods_id,
+								pg.amount
+							FROM
+								project_goods pg
+							WHERE
+								pg.project_id = #{projectId}
+						) pg 
+					LEFT JOIN (
+						SELECT
+							goods_id,
+							sum(amount) amount
+						FROM
+							project_order_goods 
+						WHERE
+							project_order_id IN (
+								SELECT
+									project_order_id
+								FROM
+									sys_flow
+								WHERE
+									project_id = #{projectId}
+								AND STATUS = 1
+							)and project_order_id &lt;&gt; #{projectOrderId}
+							and status &lt;&gt; -2
+							GROUP BY goods_id
+					) pog ON pog.goods_id = pg.goods_id
+				) pg
+			LEFT JOIN (
+				SELECT
+					goods_id,
+					amount
+				FROM
+					project_order_goods
+				WHERE
+					project_order_id = #{projectOrderId}
+				AND is_modify = 1
+				and status &lt;&gt; -2
+			) pog ON pog.goods_id = pg.goods_id
+			AND pg.amount &lt; pog.amount
+		)
+	</update>
+	<update id="updatePriceStatusForProjectGroup" parameterType="Map">
+		update project_order_goods pog set pog.status = '1' where pog.id in (
+			select
+				a.id 
+			from (
+				select 
+					pog.id 
+				from 
+					project_group_goods pgg,
+					project_order_goods pog,
+					project_order po
+				where
+					pog.is_valid = 1
+				and	pog.project_order_id = #{projectOrderId}
+				and pgg.project_group_id = #{projectGroupId}
+				and pgg.project_id = pog.project_id
+				and pgg.goods_id = pog.goods_id
+				and pog.price &gt; pgg.price
+				and po.is_valid=1
+				and pog.status &lt;&gt; -2
+			) a
+		)
+	</update>
+	<update id="updateAmountStatusForProjectGroup" parameterType="Map">
+		UPDATE project_order_goods SET `status` = status+2 where project_order_id = #{projectOrderId} and goods_id IN (
+			SELECT
+				pog.goods_id
+			FROM
+				(
+					SELECT
+						pgg.goods_id,
+						pgg.amount - IFNULL(pog.amount, 0) amount
+					FROM
+						(
+							SELECT
+								pgg.goods_id,
+								pgg.amount
+							FROM
+								project_group_goods pgg
+							WHERE
+								pgg.project_group_id = #{projectGroupId}
+						) pgg
+					LEFT JOIN (
+						SELECT
+							goods_id,
+							sum(amount) amount
+						FROM
+							project_order_goods
+						WHERE
+							project_order_id IN (
+								SELECT
+									project_order_id
+								FROM
+									sys_flow
+								WHERE
+									project_id = #{projectId}
+								AND STATUS = 1
+							)
+						AND project_order_id in (
+							select po.id from project_order po,project_group pg where po.is_valid = 1 and pg.is_valid = 1 and po.project_id = po.project_id and po.project_id = #{projectId} and pg.id = #{projectGroupId} and po.create_date BETWEEN pg.start_date and pg.end_date
+							<!-- select id from project_order po left join (select pg.start_date,pg.end_date from project_group pg where pg.id = #{projectGroupId})pg on po.create_date BETWEEN pg.start_date and pg.end_date -->
+						)
+						AND project_order_id &lt;&gt; #{projectOrderId}
+						and status &lt;&gt; -2
+						GROUP BY
+							goods_id
+					) pog ON pog.goods_id = pgg.goods_id
+				) pgg
+			LEFT JOIN (
+				SELECT
+					goods_id,
+					amount
+				FROM
+					project_order_goods
+				WHERE
+					project_order_id = #{projectOrderId}
+				AND is_modify = 1
+				and status &lt;&gt; -2
+			) pog ON pog.goods_id = pgg.goods_id
+			AND pgg.amount &lt; pog.amount
+		)
+	</update>
+	<select id="findProjectGroupId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			pg.id
+		FROM
+			project_group pg,
+			project_order po
+		WHERE
+			pg.is_valid=1
+			and po.is_valid=1
+			and po.id = #{projectOrderId}
+			and po.project_id = pg.project_id 
+			and (po.create_date BETWEEN pg.start_date and pg.end_date)
+	</select>
+	<select id="list" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="java.lang.Integer">
+		SELECT
+			CASE
+		WHEN g. NAME IS NULL THEN
+			pg.as_name
+		ELSE
+			g. NAME
+		END AS NAME,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 pog.id id,
+		 pog.price price,
+		 pg.price pgPrice,
+		 pog.project_id projectId,
+		 pog.project_order_id projectOrderId,
+		 pog.as_name asName,
+		 pog.amount amount,
+		 pog.total total,
+		 pog. STATUS STATUS,
+		 pg.as_name projectName,
+		 tpg.id tpgId,
+		 tpg.price tPrice,
+		 tpg.amount tAmount,
+		 tpg.total tTotal,
+		 tpg.`status` tStatus
+		FROM
+			project_order_goods pog
+		LEFT JOIN project_goods pg ON pg.goods_id = pog.goods_id
+		AND pog.project_id = pg.project_id
+		AND pg.is_valid = 1
+		LEFT JOIN temporary_project_goods tpg ON pog.goods_id = tpg.goods_id
+		AND pog.id = tpg.project_order_goods_id,
+		 sys_flow sf,
+		 goods g,
+		 project_order po
+		WHERE
+			pog.is_valid = 1
+		AND pog.goods_id = g.id
+		AND sf.project_order_id = pog.project_order_id
+		AND (
+			sf. STATUS = 1 || sf.`status` = - 3
+		)
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND po.is_valid = 1
+		AND pog.project_order_id = po.id
+	</select>
+	
+	<select id="detail" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="java.lang.Integer">
+		SELECT
+			CASE
+		WHEN g. NAME IS NULL THEN
+			pg.as_name
+		ELSE
+			g. NAME
+		END AS NAME,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 pog.id id,
+		 pog.price price,
+		 pog.project_id projectId,
+		 pog.project_order_id projectOrderId,
+		 pog.as_name asName,
+		 pog.amount amount,
+		 pog.total total,
+		 pog. STATUS STATUS,
+		 pg.as_name projectName,
+		 tpg.id tpgId,
+		 tpg.price tPrice,
+		 tpg.amount tAmount,
+		 tpg.total tTotal,
+		 tpg.`status` tStatus
+		FROM
+			project_order_goods pog
+		LEFT JOIN project_goods pg ON pg.goods_id = pog.goods_id
+		AND pog.project_id = pg.project_id
+		AND pg.is_valid = 1
+		LEFT JOIN temporary_project_goods tpg ON pog.goods_id = tpg.goods_id
+		AND pog.id = tpg.project_order_goods_id,
+		 sys_flow sf,
+		 goods g,
+		 project_order po
+		WHERE
+			pog.is_valid = 1
+		AND pog.goods_id = g.id
+		AND sf.project_order_id = pog.project_order_id
+		AND (
+			sf. STATUS = 1 || sf.`status` = - 3
+		)
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND po.is_valid = 1
+		AND pog.project_order_id = po.id
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="notPass" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="java.lang.Integer">
+		SELECT
+			CASE
+		WHEN g. NAME IS NULL THEN
+			pg.as_name
+		ELSE
+			g. NAME
+		END AS NAME,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 pog.id id,
+		 pog.price price,
+		 pog.project_id projectId,
+		 pog.goods_id goodsId,
+		 pog.amount amount,
+		 pog.total total,
+		 pog. STATUS STATUS,
+		 pog.as_name asName,
+		 tpg.id tpgId,
+		 tpg.price tPrice,
+		 tpg.amount tAmount,
+		 tpg.total tTotal,
+		 tpg. STATUS tStatus
+		FROM
+			project_order_goods pog
+		LEFT JOIN project_goods pg 
+		ON pg.goods_id = pog.goods_id
+		AND pg.project_id = pog.project_id
+		LEFT JOIN temporary_project_goods tpg 
+		ON tpg.project_order_id = pog.project_order_id
+		AND tpg.project_order_goods_id = pog.id,
+		 sys_flow sf,
+		 goods g,
+		 project_order po
+		WHERE
+			pog.goods_id = g.id
+		AND sf.project_order_id = pog.project_order_id
+		AND sf. STATUS = - 3
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND po.is_valid = 1
+		AND pog.project_order_id = po.id
+		AND pog. STATUS != 0
+		AND pog. STATUS != - 1
+		AND (
+			tpg.`STATUS` != 0 
+			OR tpg.`STATUS` IS NULL
+		)
+		
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="selectNotPass" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			count(a.id) > count(b.id)
+		FROM
+			(
+				SELECT
+					id,
+					project_order_id
+				FROM
+					project_order_goods
+			) a
+		LEFT JOIN (
+			SELECT
+				id,
+				project_order_id
+			FROM
+				project_order_goods
+			WHERE
+				STATUS IN (1, 2, 3)
+		) b ON a.id = b.id
+		AND a.project_order_id = b.project_order_id
+		WHERE
+			a.project_order_id =#{projectOrderId,jdbcType=INTEGER}
+	</select>
+	<select id="selectDelPass" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			COUNT(a.id)=COUNT(b.id)
+		FROM
+			(
+				SELECT
+					id,
+					project_order_id
+				FROM
+					project_order_goods
+			) a
+		LEFT JOIN (
+			SELECT
+				id,
+				project_order_id,
+				project_order_goods_id
+			FROM
+				temporary_project_goods
+				where `status`=0
+		) b ON a.id = b.project_order_goods_id
+		AND a.project_order_id = b.project_order_id
+		WHERE
+			a.project_order_id =#{projectOrderId,jdbcType=INTEGER}
+	</select>
+	<select id="havePassedDel" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			COUNT(a.id)=COUNT(b.id)
+		FROM
+			(
+				SELECT
+					id,
+					project_order_id
+				FROM
+					project_order_goods
+				WHERE
+					`status`  <![CDATA[<>]]> 0
+			) a
+		LEFT JOIN (
+			SELECT
+				id,
+				project_order_id,
+				project_order_goods_id
+			FROM
+				temporary_project_goods
+			WHERE
+				`status`  = 0
+		) b ON a.id = b.project_order_goods_id
+		AND a.project_order_id = b.project_order_id
+		WHERE
+			a.project_order_id =#{projectOrderId,jdbcType=INTEGER}
+	</select>
+	<delete id="deleteAll" parameterType="java.lang.Integer">
+		DELETE
+		FROM
+			project_order_goods
+		WHERE
+			id IN (
+				SELECT
+					a.id
+				FROM
+					(
+						SELECT
+							pog.id id
+						FROM
+							project_order_goods pog,
+							sys_flow sf,
+							project_order po
+						WHERE
+							sf.project_order_id = pog.project_order_id
+						AND sf. STATUS = #{status}
+						AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+						AND po.is_valid = 1
+						AND pog.project_order_id = po.id
+						AND pog. STATUS != 0
+						AND pog. STATUS != - 1
+					) a
+			)
+	</delete>
+	<delete id="deleteProjectOrderAll" parameterType="java.lang.Integer">
+		DELETE pog.*, po.*, sf.*
+			FROM
+				project_order_goods pog
+			LEFT JOIN project_order po ON pog.project_order_id = po.id
+			LEFT JOIN sys_flow sf ON pog.project_order_id = sf.project_order_id
+			WHERE
+				pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+	</delete>
+ 	<select id="edit" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			pog.id id,
+			g. NAME,
+			pog.as_name,
+			g. CODE,
+			g.type,
+			g.unit,
+			pog.price,
+			pog.amount,
+			pog.total,
+			pog. STATUS,
+			tpg.id tpgId,
+			tpg.price tPrice,
+			tpg.amount tAmount,
+			tpg.total tTotal,
+			tpg. STATUS tStatus
+		FROM
+			project_order_goods pog
+		LEFT JOIN temporary_project_goods tpg ON pog.id = tpg.project_order_goods_id
+		INNER JOIN goods g ON pog.goods_id = g.id,
+		 sys_flow sf
+		WHERE
+			pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND sf.project_order_id = pog.project_order_id
+		AND sf.`status` = 2
+		AND pog.`status` != 0
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+<!--  	<select id="edit" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			tpg.id id,
+			g. NAME NAME,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			tpg.project_order_goods_id projectOrderGoodsId,
+			tpg.price price,
+			tpg.amount amount,
+			tpg.total total,
+			tpg. STATUS STATUS
+		FROM
+			temporary_project_goods tpg,
+			goods g,
+			sys_flow sf
+		WHERE
+			tpg.goods_id = g.id
+		AND tpg.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND sf.project_order_id = tpg.project_order_id  
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>  -->
+	<!-- <select id="pogList" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			CASE
+		 WHEN g. NAME IS NULL THEN
+			pg.as_name
+		 ELSE
+			g. NAME
+		 END AS NAME,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 pog.id id,
+		 pog.as_name asName,
+		 pog.price price,
+		 pog.project_id projectId,
+		 pog.goods_id goodsId,
+		 pog.amount amount,
+		 pog.total total,
+		 pog. STATUS STATUS
+		FROM
+			project_order_goods pog LEFT JOIN project_goods pg ON pg.goods_id = pog.goods_id AND pog.project_id=pg.project_id AND pg.is_valid=1,
+			sys_flow sf,
+			goods g,
+			project_order po
+		WHERE
+			pog.goods_id = g.id
+		AND sf.project_order_id = pog.project_order_id
+		AND sf. STATUS = 2
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND po.is_valid = 1
+		AND pog.project_order_id = po.id
+		AND pog. STATUS != 0
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>  -->
+	<select id="selectOrder" resultMap="BaseResultMap"
+		parameterType="java.lang.Integer">
+		select * from project_order po where po.id in (select
+		pog.project_order_id from project_order_goods pog where
+		pog.is_valid = 1 and pog.project_id = #{projectId,jdbcType=INTEGER} group by
+		pog.project_order_id)
+	</select>
+	<!-- <select id="notPass" resultType="com.qrhf.pojo.ProjectOrderGoods"
+		parameterType="java.lang.Integer">
+		SELECT
+			pog.id,
+			pog.project_order_id projectOrderId,
+			pog.goods_id goodsId,
+			pog.price,
+			pog.amount,
+			pog.total,
+			pog.`status`,
+			tpg.id tpgId
+		FROM
+			project_order_goods AS pog
+		right JOIN  temporary_project_goods AS tpg
+		ON tpg.project_order_id = pog.project_order_id
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND pog.id = tpg.project_order_goods_id
+		AND pog.goods_id = tpg.goods_id
+		WHERE
+			pog.is_modify = 1
+	</select> -->
+	<delete id="remove" parameterType="java.lang.Integer">
+		delete from project_order where id = #{id}
+	</delete>
+	<select id="findList" resultType="com.qrhf.pojo.Project" parameterType="Map">
+		SELECT
+			g.`code`,
+			g.`name`,
+			g.unit,
+			g.type,
+			sum(pog.price)/sum(pog.amount) price,
+			sum(pog.amount) amount
+		FROM
+			project_order_goods pog,
+			goods g
+		WHERE
+			pog.project_order_id IN (
+				SELECT
+					id
+				FROM
+					project_order po
+				WHERE
+					po.project_id = #{projectId,jdbcType=INTEGER}
+				AND po.create_date &gt;= #{startDate,jdbcType=DATE}
+				AND po.create_date &lt;= #{endDate,jdbcType=DATE}
+			)
+		AND	pog.is_valid = 1
+		AND pog.goods_id = g.id
+		GROUP BY
+			pog.goods_id
+	</select>
+	<select id="statistics" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="Map">
+		SELECT
+			g.`code` CODE,
+			pog.as_name asName,
+			CASE
+			WHEN g. NAME IS NULL THEN
+				pog.as_name
+			ELSE
+				g. NAME
+			END AS NAME,
+			g.unit unit,
+			g.type type,
+			FORMAT(sum(pog.total) / sum(pog.amount),2) price,
+			sum(pog.amount) amount,
+			sum(pog.total) total
+		FROM
+			project_order_goods pog,
+			goods g
+		WHERE
+			pog.project_order_id IN (
+				SELECT
+					id
+				FROM
+					project_order po
+				WHERE
+					po.project_id = #{projectId,jdbcType=INTEGER}
+				AND po.create_date BETWEEN #{startDate,jdbcType=DATE}
+				AND #{endDate,jdbcType=DATE}
+			)
+		AND pog.is_valid = 1
+		AND pog.goods_id = g.id
+		GROUP BY
+			pog.goods_id
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="orderBack" parameterType="Map" resultType="com.qrhf.pojo.TemporaryProjectGoods">
+		select 
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			tpg.id id,
+			tpg.project_order_id projectOrderId,
+			tpg.project_order_goods_id projectOrderGoodsId,
+			tpg.price price,
+			tpg.amount amount,
+			tpg.total total,
+			tpg.status status 
+		from 
+			temporary_project_goods tpg,
+			goods g
+		where tpg.status != 0
+		and tpg.goods_id = g.id
+		and tpg.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+ 	<select id="orderDetail" parameterType="Map" resultType="com.qrhf.pojo.ProjectOrderGoods">
+		SELECT
+			CASE
+		 WHEN g. NAME IS NULL THEN
+			pg.as_name
+		 ELSE
+			g. NAME
+		 END AS NAME,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 pog.id id,
+		 pog.project_id projectId,
+		 pog.as_name asName,
+		 pog.price price,
+		 pog.amount amount,
+		 pog.price * pog.amount total,
+		 pog. STATUS STATUS
+		FROM
+			project_order_goods pog left join project_goods pg 
+			on pog.goods_id=pg.goods_id 
+			AND pg.project_id=pog.project_id 
+			AND pg.is_valid=1,
+			goods g
+		WHERE
+			pog.is_valid = 1
+		AND pog.goods_id = g.id
+		<!-- AND pg.goods_id = pog.goods_id -->
+		AND pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+ 	<select id="modifiedData" parameterType="Map" resultType="com.qrhf.pojo.ProjectOrderGoods">
+		SELECT
+			CASE
+		 WHEN g. NAME IS NULL THEN
+			pg.as_name
+		 ELSE
+			g.`name`
+		 END AS name,
+		 pog.id,
+		 g.`code`,
+		 g.type,
+		 g.unit,
+		 pog.price,
+		 pog.amount,
+		 pog.total,
+		 pog.as_name asName,
+		 tpg.id tpgId,
+		 tpg.price tPrice,
+		 tpg.amount tAmount,
+		 tpg.total tTotal,
+		 tpg.`status`
+		FROM
+			project_order_goods AS pog
+		LEFT JOIN temporary_project_goods AS tpg ON tpg.project_order_id = pog.project_order_id
+		AND tpg.project_order_goods_id = pog.id
+		INNER JOIN goods AS g ON pog.goods_id = g.id
+		INNER JOIN project_goods AS pg ON pg.goods_id = pog.goods_id AND pg.project_id=pog.project_id AND pg.is_valid=1
+		WHERE
+			pog.project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND pog.is_valid = 1
+		AND pog.`status` != 0
+		AND (
+			tpg.`STATUS` != 0
+			OR tpg.`STATUS` IS NULL
+		)
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+	<select id="mismatch" parameterType="Map" resultType="com.qrhf.pojo.ProjectOrderGoods">
+		select 
+		price,
+		project_id projectId,
+		amount,
+		total,
+		status 
+		from project_order_goods
+		where 
+		is_valid = 1 and
+		goods_id = 0 and 
+		project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="selectOrderQuantity" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		select count(project_id) from project_order where project_id=#{projectId} and is_valid = 1
+	</select>
+	<select id="selectPogExtra" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+			count(a.id) > count(b.id)
+		FROM
+			(
+				SELECT
+					id,
+					project_order_id,
+					STATUS
+				FROM
+					project_order_goods
+			) a
+		LEFT JOIN (
+			SELECT
+				id,
+				project_order_id,
+				project_order_goods_id,
+				STATUS
+			FROM
+				temporary_project_goods
+		) b ON a.id = b.project_order_goods_id
+		AND a.project_order_id = b.project_order_id
+		WHERE
+			a.project_order_id = #{projectOrderId}
+		AND a. STATUS = - 2
+	</select>
+	<select id="selectStatus" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		select status from project_order_goods where id = #{id}
+	</select>
+	<delete id="ProjectOrderGoodsDel" parameterType="java.lang.Integer">
+		delete from project_order_goods where project_id = #{projectId}
+	</delete>
+	<delete id="ProjectOrderGoodsDelete" parameterType="java.lang.Integer">
+		delete from project_order_goods where project_order_id = #{id}
+	</delete>
+	<delete id="deletePogExtra" parameterType="java.lang.Integer">
+		DELETE pog,
+		 tpg
+		FROM
+			project_order_goods pog
+		LEFT JOIN temporary_project_goods tpg 
+		ON pog.project_order_id = tpg.project_order_id
+		WHERE
+			pog.project_order_id = #{projectOrderId}
+			pog. STATUS = - 2
+	</delete>
+	<update id="batchEditStatus" parameterType="list">
+		update project_order_goods SET `status` = 0 where id in
+		<foreach collection="pogIds" item="pogId" open="(" separator="," close=")">
+			${pogId}
+		</foreach>
+	</update>
+	<update id="batchUpdateStatus" parameterType="map">
+		<foreach item="value" index="key" collection="pogMap" separator=";">
+			update project_order_goods SET
+			status = #{value} where id = #{key}
+		</foreach>
+	</update>
+	<delete id="deleteProjectOrder" parameterType="java.lang.Integer">
+		delete from project_order_goods where project_order_id = #{projectOrderId}
+	</delete>
+	<delete id="deleteById" parameterType="java.lang.Integer">
+		delete from project_order_goods where id = #{projectOrderGoodsId}
+	</delete>
+	
+	<delete id="delpog" parameterType="java.lang.Integer">
+		delete from project_order_goods 
+		where project_order_id = #{projectOrderId} 
+		and status &lt;&gt;0 
+	</delete>
+	
+	<delete id="deleteProUseless" parameterType="java.lang.Integer">
+		DELETE
+		FROM
+			project_order_goods
+		WHERE
+			project_order_id = #{projectOrderId} 
+		AND goods_id IS NULL
+	</delete>
+	
+	
+	<update id="updateIsModify" parameterType="java.util.List">
+        update project_order_goods
+        <trim prefix="set" suffixOverrides=",">
+            <trim prefix="project_goods_price=case" suffix="end,">
+                <foreach collection="list" item="pogs" index="index">
+                     when id=#{pogs.id} then #{pogs.pgPrice}
+                </foreach>
+            </trim>
+            <trim prefix="is_modify=case" suffix="end,">
+                <foreach collection="list" item="pogs" index="index">
+                     when id=#{pogs.id} then 0
+                </foreach>
+            </trim>
+        </trim>
+        where id in
+        <foreach collection="list" item="pogs" index="index"  open="(" separator="," close=")">     
+	        #{pogs.id} 
+	    </foreach>
+    </update>
+	
+	<update id="updateStatusNotExist" parameterType="map">
+		UPDATE project_order_goods
+		SET STATUS = - 2
+		WHERE
+			id IN (
+				SELECT
+					a.id
+				FROM
+					(
+						SELECT
+							id
+						FROM
+							project_order_goods
+						WHERE
+							project_order_id = #{projectOrderId}
+						AND project_id = #{projectId}
+						AND goods_id NOT IN (
+							SELECT
+								goods_id
+							FROM
+								project_goods
+							WHERE
+								project_id = #{projectId}
+						)
+					) a
+			)
+	  	
+	</update>
+	<select id="projectOrdeExport"  resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="Map">
+		SELECT
+			g.`code` CODE,
+			pog.as_name asName,
+			CASE
+			WHEN g. NAME IS NULL THEN
+				pog.as_name
+			ELSE
+			g. NAME
+			END AS NAME,
+			g.unit unit,
+			g.type type,
+			sum(pog.total) / sum(pog.amount) price,
+			sum(pog.amount) amount,
+			sum(pog.total) total
+		FROM
+			project_order_goods pog,
+			goods g
+		WHERE
+			pog.project_order_id IN (
+				SELECT
+					id
+				FROM
+					project_order po
+				WHERE
+					po.project_id = #{projectId,jdbcType=INTEGER}
+				AND po.create_date BETWEEN #{startDate,jdbcType=DATE}
+				AND #{endDate,jdbcType=DATE}
+			)
+		AND pog.is_valid = 1
+		AND pog.goods_id = g.id
+		GROUP BY
+			pog.goods_id
+	</select>
+	<select id="midAndAvg" resultType="java.lang.Double">
+		SELECT
+			price
+		FROM
+			project_order_goods
+		WHERE
+			project_id = #{projectId,jdbcType=INTEGER}
+			AND goods_id = #{goodsId,jdbcType=INTEGER}
+		ORDER BY
+			price ASC
+	</select>
+
+	<!-- <select id="findLatestData" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="Map">
+		SELECT
+			pg.goods_id goodsId,
+			((pg.amount - pog.amount) * pg.price) + pog.total price
+		FROM
+			project_goods pg,
+			(
+				SELECT
+					as_name,
+					pog.goods_id goods_id,
+					sum(pog.amount) amount,
+					sum(pog.amount * pog.project_goods_price) total
+				FROM
+					project_order_goods pog
+				WHERE
+					pog.project_order_id IN (
+						SELECT
+							sf.project_order_id
+						FROM
+							sys_flow sf
+						WHERE
+							sf. STATUS = 1
+						AND sf.project_id = #{projectId,jdbcType=INTEGER}
+					)
+				GROUP BY
+					pog.goods_id
+			) pog
+		WHERE
+			pg.project_id = #{projectId,jdbcType=INTEGER}
+		AND pg.goods_id = pog.goods_id
+			 
+		<if test="name!=''and name!=null">
+		<bind name="name" value="'%'+name+'%'"/>
+		 	AND pog.as_name like #{name}
+		</if>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> -->
+</mapper>

@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SysFlowMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.SysFlow">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project_order_id" property="projectOrderId"
+			jdbcType="INTEGER" />
+		<result column="title" property="title" jdbcType="VARCHAR" />
+		<result column="fail_reason" property="failReason" jdbcType="VARCHAR" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+		<result column="buyer_id" property="buyerId" jdbcType="INTEGER" />
+		<result column="manager_id" property="managerId" jdbcType="INTEGER" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="process_date" property="processDate" jdbcType="DATE" />
+		<result column="type" property="type" jdbcType="INTEGER" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id,project_order_id,title,fail_reason,status,buyer_id,manager_id,create_date,process_date,type
+	</sql>
+
+	<insert id="addSKTable" parameterType="com.qrhf.pojo.SysFlow">
+		INSERT INTO sys_flow (
+			project_id,
+			project_update_id,
+			title,
+			STATUS,
+			buyer_id,
+			manager_id,
+			create_date,
+			type
+		)
+		VALUES
+		(
+			#{projectId},
+			#{projectUpdateId},
+			#{title},
+			0,
+			#{buyerId},
+			#{managerId},
+			NOW(),
+			2
+		)
+	</insert>
+
+	<insert id="deleteProjectOrderNotice" parameterType="com.qrhf.pojo.SysFlow">
+		INSERT INTO sys_flow (
+			project_id,
+			title,
+			buyer_id,
+			manager_id,
+			create_date,
+			type
+		)
+		VALUES
+			(
+				#{projectId},
+				#{title},
+				#{buyerId},
+				#{managerId},
+				NOW(),
+				3
+			)
+	</insert>
+
+	<insert id="insert" parameterType="com.qrhf.pojo.SysFlow">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO sys_flow (
+		project_id,
+		project_order_id,
+		title,
+		STATUS,
+		buyer_id,
+		manager_id,
+		create_date,
+		type
+		)
+		VALUES
+		(
+		#{projectId},
+		#{projectOrderId},
+		#{title},
+		-2,
+		#{buyerId},
+		#{managerId},
+		NOW(),
+		1
+		)
+	</insert>
+	<update id="confirmed" parameterType="map">
+		update sys_flow set status = 1,process_date = now() where id = #{sysFlowId}
+	</update>
+	<update id="reject" parameterType="com.qrhf.pojo.SysFlow">
+		update sys_flow set status = -1 , reject_reason = #{rejectReason},process_date = now()
+		where id = #{id}
+	</update>
+	<update id="failOrder" parameterType="map">
+		update sys_flow set
+		`status` = -1,
+		fail_reason = #{failreason},
+		process_date = now()
+		where project_order_id = #{projectOrderId,jdbcType=INTEGER}
+	</update>
+	<select id="findSysFlow" parameterType="java.lang.Integer"
+		resultType="com.qrhf.pojo.SysFlow">
+		select
+		po.project_id projectId,
+		sf.project_order_id projectOrderId,
+		sf.title title
+		from
+		project_order po,
+		sys_flow sf
+		where
+		sf.project_order_id = po.id
+		and sf.status = 0
+		and sf.type=2
+		and sf.manager_id = #{userId}
+	</select>
+	<delete id="delete">
+		delete from sys_flow where project_order_id =
+		#{projectOrderId}
+	</delete>
+
+	<update id="updateStatus" parameterType="map">
+		update sys_flow set status = #{status},process_date = now() where id = #{sysFlowId}
+	</update>
+
+	<update id="emptyReason" parameterType="java.lang.Integer">
+		update sys_flow set reject_reason = null where id = #{sysFlowId}
+	</update>
+
+	<update id="submitAgain" parameterType="java.lang.Integer">
+		update sys_flow set status = 0,reject_reason = null,process_date = now() where id = #{sysFlowId}
+	</update>
+
+	<update id="startFlow" parameterType="java.lang.Integer">
+		update sys_flow set status = 0 where id = #{sysFlowId}
+	</update>
+
+	<update id="updateSfStatus" parameterType="map">
+		update sys_flow set
+		status = #{status},
+		process_date = now()
+		where project_id = #{projectId}
+		and project_order_id = #{projectOrderId}
+	</update>
+	
+	<select id="selectSysFlow" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		 SELECT
+			COUNT(sf.project_id) number
+		FROM
+			sys_flow sf,project_order po
+		WHERE
+			sf.project_id = #{projectId}
+		AND sf.`status` != -2
+		AND po.id=sf.project_order_id
+	</select>
+	
+	<select id="checkIsUpdateGoodsAll" resultType="com.qrhf.pojo.ProjectOrderGoods" parameterType="java.lang.Integer">
+		select pog.id from project_order_goods pog where pog.project_order_id = #{projectOrderId} and pog.status &lt;&gt; 0 and pog.id not in (
+			select tpg.project_order_goods_id from temporary_project_goods tpg where tpg.project_order_id = #{projectOrderId} 
+		)
+	</select>
+	
+	<insert id="addMsg" parameterType="com.qrhf.pojo.Project">
+		 <selectKey resultType ="java.lang.Integer" keyProperty= "id"
+                 order= "AFTER">
+                SELECT LAST_INSERT_ID()
+            </selectKey >
+           INSERT INTO sys_flow (project_id, title, buyer_id,type,create_date)values
+            <foreach collection ="list" item="projects" index= "index" separator =",">
+                (#{projects.id},#{projects.name},#{projects.uId},3,now())
+            </foreach >
+	</insert>
+	
+	<insert id="addExpiryDateNotice" parameterType="com.qrhf.pojo.SysFlow">
+		INSERT INTO sys_flow (title,  buyer_id,type)values(#{title},#{userId},4)
+	</insert>
+	
+	<delete id="deleteNotice" parameterType="com.qrhf.pojo.SysFlow">
+		delete from sys_flow where id = #{id}
+	</delete>
+	<update id="updateDutyUser" parameterType="map">
+		update sys_flow set manager_id = #{dutyUserId} where id = #{sysFlowId}
+	</update>
+	<insert id="temporaryBatch" parameterType="com.qrhf.pojo.SysFlow">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO sys_flow (
+		project_id,
+		project_order_id,
+		company_id,
+		title,
+		STATUS,
+		buyer_id,
+		manager_id,
+		create_date,
+		type
+		)
+		VALUES
+		(
+		#{projectId},
+		#{projectOrderId},
+		#{companyId},
+		#{title},
+		6,
+		#{buyerId},
+		#{managerId},
+		NOW(),
+		6
+		)
+	</insert>
+	<update id="updateTemporaryBatch">
+		update sys_flow set 
+		<if test="num==0">
+			`status` =7
+		</if>
+		<if test="num==1">
+			`status` = 8
+		</if>
+		,process_date = now()
+		where id =#{sysFlowId}
+	</update>
+	<select id="selectBatch" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT COUNT(project_id) number FROM sys_flow where project_id=#{projectId} AND buyer_id=#{buyerId} AND type = 6 AND `status` !=-6
+	</select>
+	<insert id="saveConsultation" parameterType="com.qrhf.pojo.Consultation">
+		<selectKey resultType ="java.lang.Integer" keyProperty= "id" order= "AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey >
+		insert into consultation (sys_flow_id,user_id,title,status,create_date) values
+		<foreach collection ="list" item="item" index= "index" separator =",">
+			(#{item.sysFlowId},#{item.userId},"会商",0,NOW())
+		</foreach >
+	</insert>
+	<insert id="saveConsultationGoods" parameterType="com.qrhf.pojo.ConsultationGoods">
+		<selectKey resultType ="java.lang.Integer" keyProperty= "id" order= "AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		insert into consultation_goods (consultation_id,goods_id,idea) values
+		<foreach collection ="list" item="item" index= "index" separator =",">
+			(#{item.consultationId},#{item.goodsId},#{item.idea})
+		</foreach>
+	</insert>
+	<update id="updateConsultationStatus" parameterType="java.lang.Integer">
+		update consultation set status = #{status} where id = #{consultationId}
+	</update>
+	<delete id="deleteConsultation" parameterType="java.lang.Integer">
+		delete from consultation where sys_flow_id = #{sysFlowId}
+	</delete>
+	<delete id="deleteConsultationGoods" parameterType="java.lang.Integer">
+		delete from consultation_goods where consultation_id in (select id from consultation where sys_flow_id = #{sysFlowId})
+	</delete>
+</mapper>

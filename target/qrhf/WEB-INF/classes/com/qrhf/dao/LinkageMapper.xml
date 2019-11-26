@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.LinkageMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Linkage">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="name" property="name" jdbcType="VARCHAR"/>
+		<result column="pid" property="pid" jdbcType="VARCHAR"/>
+		<result column="is_valid" property="isValid" jdbcType="INTEGER"/>
+		<result column="status" property="status" jdbcType="INTEGER"/>
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE"/>
+	</resultMap>
+	<sql id="Base_Columu_List">
+		id id,name name,pid pid,is_valid isValid,status status,is_valid_date isValidDate
+	</sql>
+	<select id="getLikage" resultType="com.qrhf.pojo.Linkage"  parameterType="Map">
+		SELECT id,name,pid FROM linkage WHERE pid=#{pid}
+	</select>
+	<select id="findByLikage" resultType="com.qrhf.pojo.Linkage" parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Columu_List" />
+		from linkage where pid=0
+	</select>
+</mapper>

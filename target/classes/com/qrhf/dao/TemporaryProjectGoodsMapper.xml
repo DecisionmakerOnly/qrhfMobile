@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.TemporaryProjectGoodMapper">
+	<resultMap id="BaseResultMap"
+		type="com.qrhf.pojo.TemporaryProjectGoods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project_goods_id" property="projectGoodsId" jdbcType="INTEGER" />
+		<result column="project_order_goods_id" property="projectOrderGoodsId" jdbcType="INTEGER" />
+		<result column="goods_id" property="goodsId" jdbcType="INTEGER" />
+		<result column="price" property="price" jdbcType="DOUBLE" />
+		<result column="amount" property="amount" jdbcType="DOUBLE" />
+		<result column="total" property="total" jdbcType="DOUBLE" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id, project_goods_id, goods_id, price, amount, total,status
+	</sql>
+	
+	<select id="findList" resultType="com.qrhf.pojo.TemporaryProjectGoods"
+		parameterType="Map">
+		SELECT
+			tpg.id id,
+			g. NAME NAME,
+			pg.as_name asName,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			tpg.project_id projectId,
+			tpg.project_goods_id projectGoodsId,
+			tpg.price price,
+			tpg.amount amount,
+			tpg.total total,
+			tpg. STATUS STATUS
+		FROM
+			temporary_project_goods tpg,
+			goods g,
+			project_goods pg
+		WHERE
+			tpg.goods_id = g.id
+		AND tpg.project_goods_id = pg.id
+		AND tpg.project_id = #{projectId}
+		AND pg.is_valid=1
+		<if test="i==2">
+			and tpg.`status`!=0
+		</if>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	
+	<insert id="addTemporaryProjectGoods" parameterType="com.qrhf.pojo.TemporaryProjectGoods">
+		INSERT INTO 
+			temporary_project_goods
+			(
+				project_id,
+				project_goods_id,
+				goods_id,
+				price,
+				amount,
+				total,
+				status
+			)
+		VALUES
+			(
+				#{projectId,jdbcType=INTEGER}, 
+				#{id,jdbcType=INTEGER}, 
+				#{goodsId,jdbcType=INTEGER},
+				#{price,jdbcType=DOUBLE},
+				#{amount,jdbcType=DOUBLE}, 
+				#{total,jdbcType=DOUBLE},
+				#{status,jdbcType=INTEGER}
+			) 
+	</insert>
+	
+	<insert id="addProjectOrderGoods" parameterType="com.qrhf.pojo.TemporaryProjectGoods">
+		INSERT INTO 
+			temporary_project_goods
+			(
+				project_order_id,
+				project_order_goods_id,
+				goods_id,
+				price,
+				amount,
+				total,
+				status
+			)
+		VALUES
+			(
+				#{projectOrderId,jdbcType=INTEGER}, 
+				#{id,jdbcType=INTEGER}, 
+				#{goodsId,jdbcType=INTEGER},
+				#{price,jdbcType=DOUBLE},
+				#{amount,jdbcType=DOUBLE}, 
+				#{total,jdbcType=DOUBLE},
+				#{status,jdbcType=INTEGER}
+			) 
+	</insert>
+	
+	<select id="selectTemporaryProjectGoodsByPGId" parameterType="java.lang.Integer" 
+	resultType="com.qrhf.pojo.TemporaryProjectGoods">
+		SELECT
+			tpg.id,
+			g. NAME NAME,
+			pg.as_name asName,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			tpg.price,
+			tpg.amount,
+			tpg.total,
+			tpg. STATUS
+		FROM
+			temporary_project_goods tpg,
+			goods g,
+			project_goods pg
+		WHERE
+			tpg.goods_id = g.id
+		AND tpg.project_goods_id = pg.id
+		AND tpg.project_goods_id =#{id}
+		AND pg.is_valid=1
+	</select>
+	
+	<select id="selectTemporaryProjectGoodsById" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			tpg.id,
+			tpg.price,
+			tpg.amount,
+			tpg.total,
+			tpg.STATUS
+		FROM
+			temporary_project_goods tpg left join goods g
+		ON
+			tpg.goods_id = g.id
+		WHERE
+			tpg.id =#{id}
+	</select>
+	
+	<select id="selectByPogId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT
+		 CASE
+			WHEN g. NAME IS NULL THEN
+				pg.as_name
+			ELSE
+				g. NAME
+			END AS NAME,
+		 g.id goodsId,
+		 g. CODE CODE,
+		 g.type type,
+		 g.unit unit,
+		 tpg.id,
+		 tpg.price,
+		 tpg.amount,
+		 tpg.total,
+		 tpg. STATUS,
+		 sf. STATUS sfStatus
+		FROM
+			temporary_project_goods tpg,
+			goods g LEFT JOIN project_goods pg ON pg.goods_id=g.id AND pg.is_valid=1,
+			sys_flow sf
+		WHERE
+			tpg.goods_id = g.id
+		AND sf.project_order_id = tpg.project_order_id
+		AND tpg.project_order_goods_id = #{id}
+		GROUP BY g.id
+	</select>
+	
+	
+	
+	<select id="selectProjectGoodsByGoodsId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select count(id) from temporary_project_goods where project_goods_id = #{id}
+	</select>
+	
+	<select id="selectCountPogId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select count(id) from temporary_project_goods where project_order_goods_id = #{id}
+	</select>
+	
+	<select id="selectCountPoId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select count(id) from temporary_project_goods where project_order_id = #{id}
+	</select>
+	
+	<select id="selectByPoId" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.TemporaryProjectGoods">
+		SELECT
+			project_order_id projectOrderId,
+			project_order_goods_id ProjectOrderGoodsId,
+			goods_id,
+			price,
+			amount,
+			total,
+			`status`
+		FROM
+			temporary_project_goods
+		WHERE
+			project_order_id = #{projectOrderId}
+	</select>
+	
+	<select id="selectZero" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			count(id)
+		FROM
+			temporary_project_goods
+		WHERE
+			project_order_id = #{projectOrderId}
+		AND STATUS &lt;&gt; 0
+	</select>
+	
+	<update id="updateTemporaryProjectGoods"
+		parameterType="com.qrhf.pojo.TemporaryProjectGoods">
+		update temporary_project_goods
+		<set>
+			<if test="price != null">
+				price = #{price,jdbcType=DECIMAL},
+			</if>
+			<if test="amount != null">
+				amount = #{amount,jdbcType=DECIMAL},
+			</if>
+			<if test="price != null and amount != null">
+<!-- 				total = #{total,jdbcType=DECIMAL}, -->
+				total = (#{amount,jdbcType=DECIMAL}*#{price,jdbcType=DECIMAL}), 
+			</if>
+			<if test="status != null">
+				status = #{status,jdbcType=INTEGER},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	
+	<select id="selectProjectGoodsByProjectId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		select * from temporary_project_goods where project_id = #{projectId,jdbcType=INTEGER}
+	</select>
+	
+	<select id="selectByProjectOrderId" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		select * from temporary_project_goods where project_order_id = #{projectOrderId,jdbcType=INTEGER}
+	</select>
+	
+	<delete id="deleteByProjectId" parameterType="java.lang.Integer">
+		delete from temporary_project_goods where project_id = #{projectId,jdbcType=INTEGER}
+	</delete>
+	
+	<delete id="deleteByProjectOrderId" parameterType="java.lang.Integer">
+		delete from temporary_project_goods where project_order_id = #{projectOrderId,jdbcType=INTEGER}
+	</delete>
+	
+	<update id="updateStatus" parameterType="java.lang.Integer">
+		update temporary_project_goods set status = 0 where id = #{id,jdbcType=INTEGER}
+	</update>
+	
+	<update id="updateStatusByPogId" parameterType="java.lang.Integer">
+		update temporary_project_goods set status = 0 where project_order_goods_id = #{projectOrderGoodsId,jdbcType=INTEGER}
+	</update>
+	
+	<insert id="deleteAll" parameterType="java.lang.Integer">
+		INSERT INTO temporary_project_goods (
+			project_order_id,
+			project_order_goods_id,
+			goods_id,
+			price,
+			amount,
+			total,
+			STATUS
+		) SELECT
+			project_order_id,
+			id,
+			goods_id,
+			price,
+			amount,
+			total,
+			0
+		FROM
+			project_order_goods
+		WHERE
+			project_order_id = #{projectOrderId,jdbcType=INTEGER}
+		AND is_modify = 1
+	</insert>
+</mapper>

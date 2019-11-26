@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ContractMapper">
+	<resultMap type="com.qrhf.pojo.Contract" id="BaseResultMap">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project_id" property="projectId" jdbcType="INTEGER" />
+		<result column="project_order_id" property="projectOrderId" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id,name name,code code,file_path filePath,create_date
+		createDate,is_valid
+		isValid,is_valid_date isValidDate
+	</sql>
+	<select id="findContractFilePath" resultType="com.qrhf.pojo.Contract" parameterType="java.lang.Integer">
+		select <include refid="Base_Column_List" /> from contract where id = #{contractId}
+	</select>
+	<update id="update" parameterType="com.qrhf.pojo.Contract">
+		update contract
+		<set>
+			<if test="name != null">
+				name = #{name},
+			</if>
+			<if test="filePath != null">
+				file_path = #{filePath},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	<select id="findList" resultType="com.qrhf.pojo.Contract" parameterType="java.util.Map">
+		 SELECT
+		      c.id id,
+		      c.company_id companyId,
+		      c. NAME NAME,
+		      c. CODE CODE,
+		      c.file_path filePath,
+		      c.create_date createDate,
+		      pog.total price,
+		      cp.total payPrice,
+		      ci.total  invoicePrice
+		    FROM
+		      contract c
+		    LEFT JOIN (
+		      SELECT
+		        pog.contract_id,
+		        sum(pog.price * pog.amount) total
+		      FROM
+		        project_order_goods pog
+		      GROUP BY
+		        pog.contract_id
+		    ) pog ON pog.contract_id = c.id
+		    LEFT JOIN (
+		      SELECT
+		        cp.contract_id,
+		        sum(cp.price) total
+		      FROM
+		        contract_pay cp
+		      GROUP BY
+		        cp.contract_id
+		    ) cp ON cp.contract_id = c.id
+		    LEFT JOIN (
+		    SELECT
+		        ci.contract_id,
+		        sum(ci.price) total
+		      FROM
+		        contract_invoice ci
+		      GROUP BY
+		        ci.contract_id
+		    ) ci ON c.id = ci.contract_id
+		    WHERE
+		      c.is_valid = 1 
+		<if test="companyId!=null">
+			and c.company_id = #{companyId}
+		</if>
+		GROUP BY c.id
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="findProjectList" resultType="com.qrhf.pojo.Project" parameterType="java.util.Map">
+		SELECT
+			*,
+			SUM(pog.total) sumAmount
+		FROM
+			project p,
+			project_order po,
+			project_order_goods pog
+		WHERE
+			p.id = po.project_id
+		AND pog.project_order_id=po.id
+		AND po.contract_id = #{contractId}
+		AND po.id IN (
+			SELECT
+				po.id id
+			FROM
+				project_order po,
+				sys_flow sf
+			WHERE
+				po.id = sf.project_order_id
+			AND po.is_valid = 1
+			AND sf.`status` = 1
+		)
+		GROUP BY
+			p.id
+	</select>
+	
+	<select id="findProjectOrderList" resultType="com.qrhf.pojo.ProjectOrder" parameterType="java.lang.Integer">
+		select
+			id,name
+		from
+			project_order po
+		where
+			po.is_valid = 1 and po.project_id = #{projectId} and po.contract_id = #{contractId}
+		and po.id in (select sf.project_order_id from sys_flow sf where sf.status = 1)
+	</select>
+	
+	<delete id="del" parameterType="java.lang.Integer">
+		delete from contract where id = #{contractId}
+	</delete>
+	<delete id="delContractList">
+		delete from contract_list where contract_id = #{contractId}
+	</delete>
+	<delete id="delContractListGoods">
+		delete from contract_list_goods where contract_list_id in (select id from contract_list where contract_id = #{contractId})
+	</delete>
+	
+<!-- 	<delete id="contractDel" parameterType="java.lang.Integer"> -->
+<!-- 		delete from contract -->
+<!-- 		where project_id = #{projectId} -->
+<!-- 	</delete> -->
+<!-- 	<delete id="contractProjectOrderDel" parameterType="java.lang.Integer"> -->
+<!-- 		delete from contract -->
+<!-- 		where project_order_id = #{projectOrderId} -->
+<!-- 	</delete> -->
+	<select id="selectProject" resultType="com.qrhf.pojo.Project"
+		parameterType="java.lang.Integer">
+		select * from project p,user u where u.id=#{userId} and
+		p.is_valid=1 and(
+		(p.user_id = u.id)
+		OR (p.duty_user = u.id)
+		OR (
+		p.jurisdiction = 1
+		AND p.company_id = u.company_Id
+		)
+		OR (
+		p.jurisdiction = 2
+		AND p.department_id = u.department_Id
+		)
+		)
+	</select>
+	<select id="selectProjectOrder" resultType="com.qrhf.pojo.ProjectOrder"
+		parameterType="java.lang.Integer">
+		select * from project_order po where po.project_id =
+		#{projectId} and po.is_valid = 1 and po.id not in (
+		SELECT
+		sf.project_order_id
+		FROM
+		sys_flow sf
+		WHERE
+		sf. STATUS != 1
+		OR sf.reject_reason IS NOT NULL
+		)
+	</select>
+	<insert id="insertContract" parameterType="com.qrhf.pojo.Contract">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into contract
+		(project_id,project_order_id,name,code,file_path,create_date,is_valid,is_valid_date)
+		values
+		(#{projectId},#{projectOrderId},#{name},#{code},#{filePath},curdate(),1,#{isValidDate})
+
+	</insert>
+	<insert id="save" parameterType="com.qrhf.pojo.Contract">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into contract
+		(company_id,name,code,file_path,create_date,is_valid)
+		values
+		(#{companyId},#{name},#{code},#{filePath},curdate(),1)
+	</insert>
+	
+	<select id="selectNameByProjectOrderId" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.Contract">
+		SELECT c.name from contract c, project_order po where po.contract_id = c.id and po.id=#{projectOrderId}
+	</select>
+	<insert id="contractPay" parameterType="com.qrhf.pojo.ContractPay">
+		insert into contract_pay
+			(contract_id,user_id,price,create_date,pay_date)
+		values
+			(#{contractId},#{userId},#{price},now(),#{payDate})
+	</insert>
+	<select id="contractPayList" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ContractPay">
+		select cp.id id,cp.contract_id contractId,cp.user_id userId,cp.price price,cp.create_date createDate,cp.pay_date dPayDate from contract_pay cp where cp.contract_id = #{contractId} order by cp.create_date
+	</select>
+	<delete id="contractPayDel" parameterType="java.lang.Integer">
+		delete from contract_pay where id = #{contractPayId}
+	</delete>
+	<insert id="contractInvoice" parameterType="com.qrhf.pojo.ContractInvoice">
+		insert into contract_invoice
+			(company_id,user_id,contract_id,price,create_date,invoice_date)
+		values
+			(#{companyId},#{userId},#{contractId},#{price},NOW(),#{invoiceDate})
+	</insert>
+	<select id="contractInvoiceList" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.ContractInvoice">
+		select ci.id id,ci.contract_id contractId,ci.user_id userId,ci.price price,ci.create_date createDate,ci.invoice_date dInvoiceDate from contract_invoice ci where ci.contract_id = #{contractId} order by ci.create_date
+	</select>
+	<delete id="contractInvoiceDel" parameterType="java.lang.Integer">
+		delete from contract_invoice where id = #{contractInvoiceId}
+	</delete>
+</mapper>

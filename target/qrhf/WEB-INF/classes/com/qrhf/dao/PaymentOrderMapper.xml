@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.PaymentOrderMapper">
+	<resultMap type="com.qrhf.pojo.PaymentOrder" id="BaseResultMap">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="name" property="name" jdbcType="VARCHAR"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,name name
+	</sql>
+	<insert id="savePaymentOrder">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into payment_order 
+			(company_id,user_id,invoice_id,order_code,order_name,order_amount,pay_amount,order_status,pay_status,create_date,remark,pay_type,is_valid)
+		values
+			(#{companyId},#{userId},#{invoiceId},#{orderCode},#{orderName},#{orderAmount},#{payAmount},0,0,now(),#{remark},#{payType},0)
+	</insert>
+	<insert id="savePaymentOrderUsers">
+		insert into payment_order_user (payment_order_id,user_id,time_length)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.paymentOrderId},#{item.userId},#{item.timeLength})
+		</foreach>
+	</insert>
+	<select id="findPaymentOrder" resultType="com.qrhf.pojo.PaymentOrder" parameterType="Map">
+		SELECT
+			po.id paymentOrderId,
+			c.`name` companyName,
+			u.user_name userName,
+			po.order_code orderCode,
+			po.order_name orderName,
+			po.order_status orderStatus,
+			po.pay_status payStatus,
+			po.order_amount orderAmount,
+			po.pay_amount payAmount,
+			po.create_date createDate,
+			po.pay_type payType,
+			po.pay_date payDate,
+			po.remark remark,
+			invoice_id invoiceId
+		FROM
+			payment_order po
+			INNER JOIN `user` u ON u.id = po.user_id
+			INNER JOIN company c ON c.id = po.company_id
+			where
+			po.is_valid=1
+			order by po.pay_status ,po.create_date DESC
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="findList" resultType="com.qrhf.pojo.PaymentOrder" parameterType="Map">
+		SELECT
+			po.id id,
+			c.`name` companyName,
+			u.user_name userName,
+			po.order_code orderCode,
+			po.order_name orderName,
+			po.order_status orderStatus,
+			po.pay_status payStatus,
+			po.order_amount orderAmount,
+			po.pay_amount payAmount,
+			po.create_date createDate,
+			po.pay_type payType,
+			po.pay_date payDate,
+			po.remark remark,
+			invoice_id invoiceId,
+			po.coupon_id couponId
+		FROM
+			payment_order po
+			INNER JOIN `user` u ON u.id = po.user_id
+			INNER JOIN company c ON c.id = po.company_id
+		where
+			po.is_valid=1
+		AND	po.user_id = #{userId}
+		order by po.pay_status,po.create_date DESC
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="findPaymentOrderById" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.PaymentOrder">
+		select po.*,pou.users,pou.timeLength from 
+			(
+				SELECT
+					id id,
+					company_id companyId,
+					user_id userId,
+					order_code orderCode,
+					order_name orderName,
+					order_amount orderAmount,
+					pay_amount payAmount,
+					order_status orderStatus,
+					pay_status payStatus,
+					create_date createDate,
+					remark remark,
+					pay_type payType,
+					pay_date payDate,
+					invoice_id invoiceId
+				FROM
+					payment_order
+				WHERE
+					id = #{paymentOrderId}
+			)po
+		left join
+			(
+				select group_concat(pou.user_id) users,time_length timeLength,payment_order_id from payment_order_user pou where pou.payment_order_id = #{paymentOrderId} group by payment_order_id
+			)pou on pou.payment_order_id = po.id
+	</select>
+	<update id="alipayReturnTradeNO">
+		update 
+			payment_order
+		set
+			outer_trade_no = #{tradeNo},
+			order_status = 1,
+			pay_status = 1,
+			pay_date=now()
+		where 
+			id = #{paymentOrderId}
+	</update>
+	<update id="updateOrderStatus">
+		update payment_order set is_valid = #{isValid} where id = #{id}
+	</update>
+	<update id="pay99">
+		update payment_order set order_status = 2 where id = #{paymentOrderId}
+	</update>
+	<update id="pay99Complete">
+		update payment_order set pay_date = #{payDate},order_status = 1,pay_status = 1 where remark = #{remark}
+	</update>
+	<update id="firmOrder">
+		update payment_order set is_valid = 1,coupon_id=#{couponId},order_amount=#{orderAmount},pay_amount=#{payAmount} where id = #{paymentOrderId}
+	</update>
+	<select id="selectPaymentOrder" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+		 	COUNT(c.id)
+		FROM 
+			payment_order po LEFT JOIN coupon c 
+			ON c.company_id=po.company_id where po.id= #{paymentOrderId}
+	</select>
+	<select id="findPayInvoic" resultType="com.qrhf.pojo.PaymentOrder" parameterType="Map">
+		SELECT
+			COUNT(por.id) id,
+			COUNT(il.id) invoiceId,
+			COUNT(por.invoice_id)-COUNT(il.id) surplus
+		FROM
+			payment_order por LEFT JOIN  invoice_list il ON por.invoice_id=il.id
+		WHERE
+			por.company_id = #{companyId}
+		AND por.order_status = 1
+		AND por.is_valid = 1
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="findInvoiceListAndAddressManagementById" resultType="com.qrhf.pojo.InvoiceList" parameterType="java.lang.Integer">
+		select 
+			company_id companyId,
+			user_id userId,
+			unit_name unitName,
+			taxpayer_id taxpayerId,
+			registered_address registeredAddress,
+			registered_phone registeredPhone,
+			opening_bank openingBank,
+			bank_account bankAccount,
+			recipient_name recipientName,
+			recipient_phone recipientPhone,
+			recipient_address recipientAddress,
+			create_date createDate,
+			is_valid isValid,
+			is_valid_date isValid_date
+		from
+			invoice_list il
+		where
+			id = #{invoiceListId}
+	</select>
+	<select id="findPaymentOrderId" resultType="com.qrhf.pojo.PaymentOrder" parameterType="java.lang.String">
+		SELECT id paymentOrderId from payment_order WHERE remark=#{remark}
+	</select>
+</mapper>

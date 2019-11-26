@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ApplyExpiryDateMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.ApplyExpiryDate">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="user_id" property="userId" jdbcType="INTEGER" />
+		<result column="process_user_id" property="processUserId" jdbcType="INTEGER" />
+		<result column="reason" property="reason" jdbcType="VARCHAR" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="process_date" property="processDate" jdbcType="DATE" />
+		<result column="type" property="type" jdbcType="INTEGER" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,company_id companyId,user_id userId, process_user_id processUserId,
+		reason reason,status status,create_date createDate,process_date processDate,type type
+	</sql>
+	<select id="findApplyExpiryDate" resultType="com.qrhf.pojo.ApplyExpiryDate" parameterType="Map">
+		SELECT
+			u.id userId,
+			aed.id id,
+			aed.company_id companyId,
+			c.`name` companyName,
+			u.user_name userName,
+			aed.reason reason,
+			aed. STATUS STATUS,
+			aed.create_date createDate
+		FROM
+			apply_expiry_date aed
+		INNER JOIN `user` u ON u.id = aed.user_id
+		INNER JOIN company c ON c.id = aed.company_id
+		WHERE
+			aed. STATUS = 0
+		ORDER BY
+			aed.create_date DESC
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<insert id="addApplyExpiryDate" parameterType="com.qrhf.pojo.ApplyExpiryDate">
+		insert into apply_expiry_date
+			(company_id,user_id,process_user_id,reason,status,create_date,process_date)
+		values
+			(#{companyId},#{userId},#{processUserId},#{reason},0,NOW(),#{processDate})	
+	</insert>
+	<update id="updateApplyExpiryDate">
+		UPDATE apply_expiry_date SET status=1,process_date=NOW(),process_user_id=#{processUserId},type=-1  WHERE id=#{id}
+	</update>
+	<update id="applyExpiryDateNo">
+		UPDATE apply_expiry_date SET status=-1,process_date=NOW(),process_user_id=#{processUserId},reason=#{reason},type=-1 WHERE id=#{id}
+	</update>
+	<update id="deleteApplyExpiryDate" parameterType="java.lang.Integer">
+		UPDATE apply_expiry_date SET type=1 WHERE id=#{id}
+	</update>
+</mapper>

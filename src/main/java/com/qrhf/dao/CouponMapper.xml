@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.CouponMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Coupon">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="user_id" property="userId" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="promotion_id" property="promotionId" jdbcType="INTEGER" />
+		<result column="promotion_company_id" property="promotionCompanyId" jdbcType="INTEGER" />
+		<result column="order_amount" property="orderAmount" jdbcType="DOUBLE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="status" property="status" jdbcType="INTEGER"/>
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DOUBLE" />
+		<result column="start_date" property="startDate" jdbcType="DATE"/>
+		<result column="end_date" property="endDate" jdbcType="DATE"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,user_id userId,company_id companyId,order_amount orderAmount,
+		is_valid isValid,status status,
+		create_date createDate,is_valid_date isValidDate,start_date startDate,end_date endDate
+	</sql>
+	<select id="findList" resultType="com.qrhf.pojo.Coupon" parameterType="Map">
+		SELECT
+			cp.id id,
+			cp.promotion_id promotionId,
+  			cp.promotion_company_id promotionCompanyId,
+			CONCAT('¥',cp.order_amount) money,
+			CONCAT('¥', cp.order_amount *0.2) payTaxes,
+			CONCAT('¥', cp.order_amount *0.01) serviceCharge,
+			CONCAT('¥', cp.order_amount-cp.order_amount *0.2-cp.order_amount *0.01) withdrawable,
+			cp.order_amount-cp.order_amount *0.2-cp.order_amount *0.01 withdrawMoney,
+			cp.is_valid isValid,
+			CONCAT(cp.start_date,'至',cp.end_date) termDate
+		FROM
+			coupon cp
+			INNER JOIN company c ON c.id = cp.company_id
+			and cp.is_valid = 1
+			AND c.share_code = #{shareCode}
+			order by case when cp.is_valid=1 then NULL ELSE cp.is_valid end
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="findCouponList" resultType="com.qrhf.pojo.Coupon" parameterType="Map">
+		select 
+			id id,
+			order_amount orderAmount
+		from
+			coupon
+		where
+			is_valid = #{isValid}
+		and promotion_id = #{userId}
+	</select>
+	<select id="queryCoupon" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			cp.id id
+		FROM
+			coupon cp
+			INNER JOIN company c ON c.id = cp.company_id
+		AND c.is_valid = 1
+		AND c.share_code = #{shareCode}
+		AND cp.create_date > cp.is_valid_date
+	</select>
+	
+	<update id="updateCoupon" parameterType="com.qrhf.pojo.Coupon">
+		UPDATE coupon SET is_valid=0  WHERE id IN (#{id})
+	</update>
+	
+	<insert id="saveCoupon" parameterType="com.qrhf.pojo.Coupon">
+<!-- 		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer"> -->
+<!-- 			select -->
+<!-- 			LAST_INSERT_ID() -->
+<!-- 		</selectKey> -->
+		INSERT INTO coupon (
+			user_id,
+			company_id,
+			promotion_id,
+			promotion_company_id,
+			order_amount,
+			is_valid,
+			STATUS,
+			create_date,
+			start_date,
+			end_date
+		) SELECT
+			user_id,
+			company_id,
+			(SELECT id  FROM `user` where login_name=(SELECT c.share_code FROM payment_order po LEFT JOIN company c ON c.id=po.company_id where po.id=#{paymentOrderId})) ,
+			(SELECT company_id  FROM `user` where login_name=(SELECT c.share_code FROM payment_order po LEFT JOIN company c ON c.id=po.company_id where po.id=#{paymentOrderId})),
+			pay_amount*0.1,
+			1,
+			1,
+			CURDATE(),
+			CURDATE(),
+			date_add(NOW(), INTERVAL 1 MONTH)
+		FROM
+			payment_order
+		WHERE
+			id = #{paymentOrderId}
+		</insert>
+		<update id="updateCouponIsValud" parameterType="java.lang.Integer">
+			UPDATE coupon SET is_valid= #{isValid}  WHERE id = #{couponId}
+		</update>
+</mapper>

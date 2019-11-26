@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.TemporaryAuthorityRangeMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.TemporaryAuthorityRange">
+		<result column="sys_role" property="sysRole" jdbcType="INTEGER" />
+		<result column="sys_resource" property="sysResource" jdbcType="INTEGER" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		sys_role,sys_resource
+	</sql>
+	<select id="queryRangeBySysRole" resultType="java.lang.String" parameterType="java.lang.Integer">
+		select
+		sys_resource
+		from temporary_authority_range where
+		sys_role=#{sysRole}
+	</select>
+	<insert id="saveTemporaryAuthorityRange" parameterType="com.qrhf.pojo.TemporaryAuthorityRange">
+		insert into
+		temporary_authority_range (sys_role,sys_resource)
+		values(#{sysRole},#{sysResource})
+	</insert>
+	<delete id="delTemporaryAuthorityRange" parameterType="java.lang.Integer">
+		delete from
+		temporary_authority_range where sys_role=#{sysRole}
+	</delete>
+	<select id="queryTemporaryAuthorityRange" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Column_List" />
+		from temporary_authority_range where sys_role=#{sysRole}
+	</select>
+</mapper>

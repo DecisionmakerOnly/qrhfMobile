@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectUpdateGoodsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.ProjectUpdateGoods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="project" property="project" jdbcType="INTEGER" />
+		<result column="project_update" property="projectUpdate" jdbcType="INTEGER" />
+		<result column="goods" property="goods" jdbcType="INTEGER" />
+		<result column="as_name" property="asName" jdbcType="VARCHAR" />
+		<result column="price" property="price" jdbcType="DOUBLE" />
+		<result column="amount" property="amount" jdbcType="DOUBLE" />
+		<result column="total" property="total" jdbcType="DOUBLE" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+		<result column="edit_count" property="editCount" jdbcType="INTEGER" />
+		<result column="edit_status" property="editStatus" jdbcType="INTEGER" />
+		<result column="edit_amount" property="editAmount" jdbcType="DOUBLE" />
+		<result column="project_goods_amount" property="projectGoodsAmount" jdbcType="DOUBLE" />
+		<result column="create_date" property="createDate" jdbcType="TIMESTAMP" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="TIMESTAMP" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		pug.id id,pug.project project,pug.project_update projectUpdate,
+		pug.goods goods,pug.as_name asName,pug.price price,pug.amount amount,
+		pug.total total,pug.create_date createDate,pug.edit_count editCount,
+		pug.edit_status editStatus,pug.edit_amount editAmount,pug.is_valid isValid,
+		pug.is_valid_date isValidDate
+	</sql>
+	
+	<select id="findProjectUpdateGoodsById" resultType="com.qrhf.vo.ProjectUpdateGoodsVO" parameterType="java.lang.Integer">
+		SELECT
+			g.id goodsId,
+			g.NAME NAME,
+			g.CODE CODE,
+			g.type type,
+			g.unit unit,
+			pug.id id,
+			pug.as_name asName,
+			pug.price price,
+		CASE WHEN pug.edit_status = 1 THEN pg.amount + pug.edit_amount ELSE pg.amount - pug.edit_amount END amount,
+			pug.total total,
+			pug.edit_status editStatus,
+			pug.edit_amount editAmount 
+		FROM
+			project_update_goods pug
+			LEFT JOIN goods g ON pug.goods = g.id
+			LEFT JOIN project_goods pg ON pg.goods_id = pug.goods
+			AND pug.project = pg.project_id
+		WHERE
+			pug.id = #{projectUpdateGoodsId}
+	</select>
+	
+	<select id="findProjectUpdateGoodsByIds" resultType="com.qrhf.pojo.ProjectUpdateGoods" parameterType="java.lang.Integer">
+		SELECT
+			<include refid="Base_Column_List"/>
+		FROM
+			project_update_goods pug
+		WHERE
+			pug.project = #{projectId}	
+		AND pug.project_update = #{projectUpdateId}
+		AND pug.goods = #{goodsId}
+	</select>
+	
+	<select id="findListForUpdate" resultType="com.qrhf.vo.ProjectUpdateGoodsVO" parameterType="java.lang.Integer">
+		select
+			pug.id id,
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			pg.amount pgAmount,
+			pug.as_name asName,
+			pug.price price,
+			pug.edit_amount editAmount,
+			pug.edit_status editStatus,
+			case when pug.edit_status=1 then pg.amount+pug.edit_amount
+			else pg.amount-pug.edit_amount end amount,
+			pug.price * (case when pug.edit_status=1 then pg.amount+pug.edit_amount
+			else pg.amount-pug.edit_amount end ) total,
+			pug.status status,
+			pug.goods goodsId,
+			pug.project project,
+			cg.ideas ideas,
+			pg.price defaultPrice,
+			pg.amount defaultAmount
+		from
+			project_update_goods pug
+		left join
+			goods g on pug.goods = g.id
+		left join
+			(select cg.goods_id goodsId,group_concat((select user_name from user where id = c.user_id),':',cg.idea,",") ideas from consultation c,consultation_goods cg where c.sys_flow_id = #{sysFlowId} and c.id = cg.consultation_id group by cg.goods_id)cg on cg.goodsId = pug.goods
+		left join
+			(select pg.goods_id goodsId,pg.price price,pg.amount amount from project_goods pg where pg.project_id = #{projectId})pg on pg.goodsId = pug.goods
+		where
+			pug.project = #{projectId}
+		and pug.project_update = #{projectUpdateId}
+	</select>
+	
+	<select id="selectCount" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		select
+			count(pug.id) count
+		from
+			project_update_goods pug
+		left join
+			goods g on pug.goods = g.id
+		where
+			pug.project = #{projectId}
+		and pug.project_update = #{projectUpdateId}
+	</select>
+	
+	<insert id="save" parameterType="com.qrhf.pojo.ProjectUpdateGoods">
+		insert into project_update_goods (
+			project,project_update,goods,as_name,price,amount,total,status,edit_count,edit_status,edit_amount,project_goods_amount,create_date,is_valid
+		)
+		values (
+			#{project},#{projectUpdate},#{goods},#{asName},#{price},#{amount},#{total},#{status},#{editCount},#{editStatus},#{editAmount},#{projectGoodsAmount},now(),#{isValid}
+		)
+		<!-- DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') -->
+	</insert>
+	<update id="update" parameterType="com.qrhf.pojo.ProjectUpdateGoods">
+		update
+			project_update_goods
+		set
+			as_name = #{asName},
+			price = #{price},
+			amount = #{amount},
+			total = #{total},
+			edit_status = #{editStatus},
+			edit_amount = #{editAmount},
+			project_goods_amount=#{projectGoodsAmount},
+			is_valid = #{isValid}
+		where
+			project = #{project}
+		and project_update = #{projectUpdate}
+		and goods = #{goods}
+	</update>
+	<update id="updateAll" parameterType="java.lang.Integer">
+		update
+			project_update_goods
+		set
+			is_valid = 1
+		where
+			project_update = #{projectUpdateId}
+	</update>
+	<update id="projectUpdateGoodsUpdate" parameterType="com.qrhf.pojo.ProjectUpdateGoods">
+		update
+			project_update_goods
+		set
+			price = #{price},
+			amount = #{amount},
+			edit_amount=#{editAmount},
+			edit_status=#{editStatus},
+			project_goods_amount=#{projectGoodsAmount}
+		where
+			id = #{id}
+	</update>
+	<delete id="projectUpdateGoodsDel" parameterType="java.lang.Integer">
+		delete from project_update_goods where id=#{projectUpdateGoodsId}
+	</delete>
+	
+	<select id="findList" parameterType="Map" resultType="com.qrhf.pojo.ProjectUpdateGoods">
+		SELECT DISTINCT
+			g.id id,
+			g. NAME NAME,
+			pgb.as_name asName,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			pgb.amount,
+			pgb.price,
+			pgb.total,
+			IFNULL(NULL,0) updateType,
+			0 AS editCount,
+			0 AS editStatus,
+			NULL createDate
+		FROM
+			project_goods_bak pgb
+			LEFT join goods g on g.id =pgb.goods_id
+		WHERE
+			pgb.goods_id = g.id
+		AND pgb.goods_id IN (
+			SELECT
+				goods
+			FROM
+				project_update_goods
+			WHERE
+				project = #{projectId}
+		)
+		AND pgb.project_id =#{projectId}
+		<if test="updateType!=0">
+			 AND pgb.update_type !=0
+		</if>
+		<if test="searchName!=''and searchName!=null">
+			<!-- <bind name="searchName" value="'%'+searchName+'%'"/>
+			 	AND pgb.as_name like #{searchName} -->
+			 AND (pgb.as_name like concat('%',#{searchName},'%') or g.code=#{searchName})
+		</if>
+		UNION ALL
+			SELECT
+				g.id id,
+				g. NAME NAME,
+				pug.as_name asName,
+				g. CODE CODE,
+				g.type type,
+				g.unit unit,
+				pug.edit_amount amount,
+				pug.price price,
+				pug.price * pug.amount total,
+				pu.update_type updateType,
+				pug.edit_count editCount,
+				pug.edit_status editStatus,
+				pug.create_date createDate
+			FROM
+				project_update_goods pug
+				LEFT JOIN goods g ON pug.goods = g.id
+				LEFT JOIN project_update pu ON pu.id = pug.project_update 
+				AND pu.is_valid = 0 
+			WHERE
+				pug.project = #{projectId}
+			AND pug.is_valid = #{isValid}
+			<choose>
+			<when test="updateType == 1">
+				AND  pu.update_type like '1'
+			</when>
+			<when test="updateType == 2">
+				AND  pu.update_type like '2'
+			</when>
+			<when test="updateType == 3">
+				AND  pu.update_type like '3'
+			</when>
+			<when test="updateType == 4">
+				AND  pu.update_type like '4'
+			</when>
+		</choose>
+			<if test="searchName!=''and searchName!=null">
+			<!-- <bind name="searchName" value="'%'+searchName+'%'"/>
+			 	AND pug.as_name like #{searchName} -->
+			 AND (pug.as_name like concat('%',#{searchName},'%') or g.code=#{searchName})
+			</if>
+			ORDER BY
+				id,
+				editCount
+	</select>
+	
+	<select id="getEditCount" parameterType="com.qrhf.pojo.ProjectUpdateGoods" resultType="Integer">
+		select count(1) from project_update_goods where project = #{project} and goods=#{goods}
+	</select>
+	<select id="findSingle"  resultType="com.qrhf.pojo.ProjectUpdateGoods" parameterType="Map">
+<!-- 		SELECT  -->
+<!-- 			* -->
+<!-- 			FROM ( -->
+<!-- 				SELECT -->
+<!-- 					pug.project project, -->
+<!-- 					pug.goods goods, -->
+<!-- 					pug.price price, -->
+<!-- 					pug.edit_amount amount, -->
+<!-- 					pug.price*pug.edit_amount total, -->
+<!-- 					pu.update_type updateType, -->
+<!-- 					pug.edit_status editStatus, -->
+<!-- 					pug.create_date createDate, -->
+<!-- 					pug.edit_count editCount -->
+<!-- 				FROM -->
+<!-- 					project_update_goods pug -->
+<!-- 					LEFT JOIN project_update pu ON pu.id = pug.project_update  -->
+<!-- 					AND pu.is_valid = 0  -->
+<!-- 				WHERE -->
+<!-- 					pug.project = #{projecId} -->
+<!-- 					AND pug.goods=#{goodsId} -->
+<!-- 					AND pug.is_valid = 1 -->
+<!-- 				UNION ALL -->
+<!-- 				SELECT	 -->
+<!-- 					pgb.project_id project, -->
+<!-- 					pgb.goods_id goods, -->
+<!-- 					pgb.price price, -->
+<!-- 					pgb.amount amount, -->
+<!-- 					pgb.total total, -->
+<!-- 					IFNULL(NULL,0) updateType, -->
+<!-- 					NULL editStatus, -->
+<!-- 					NULL createDate, -->
+<!-- 					IFNULL(NULL,0) editCount -->
+<!-- 				FROM -->
+<!-- 					project_goods_bak pgb	 -->
+<!-- 				WHERE -->
+<!-- 					pgb.project_id = #{projecId} -->
+<!-- 					AND pgb.goods_id =#{goodsId} -->
+			
+<!-- 		)pugg LEFT JOIN goods g on g.id=pugg.goods -->
+	SELECT 
+			g.id id,
+			g. NAME NAME,
+			pgb.as_name asName,
+			g. CODE CODE,
+			g.type type,
+			g.unit unit,
+			pgb.amount,
+			pgb.price,
+			pgb.total,
+			IFNULL(NULL,0) updateType,
+			0 AS editCount,
+			0 AS editStatus,
+			NULL createDate,
+<!-- 			p.createDate createDate, -->
+			0 AS projectGoodsAmount
+		FROM
+			project_goods_bak pgb
+			LEFT join goods g on g.id =pgb.goods_id
+<!-- 			LEFT JOIN project p on p.id=pgb.project_id -->
+		WHERE
+			pgb.goods_id = g.id
+		AND pgb.goods_id =#{goodsId}
+		AND pgb.project_id =#{projectId}
+		union all
+	SELECT
+				g.id id,
+				g. NAME NAME,
+				pug.as_name asName,
+				g. CODE CODE,
+				g.type type,
+				g.unit unit,
+				case when pug.edit_amount is null then pug.amount
+				else pug.edit_amount end amount,
+				pug.price price,
+				pug.price * pug.amount total,
+				pu.update_type updateType,
+				pug.edit_count editCount,
+				pug.edit_status editStatus,
+				pug.create_date createDate,
+				pug.project_goods_amount projectGoodsAmount
+			FROM
+				project_update_goods pug
+				LEFT JOIN goods g ON pug.goods = g.id
+				LEFT JOIN project_update pu ON pu.id = pug.project_update 
+				AND pu.is_valid = 1 
+			WHERE
+				pug.project = #{projectId}
+			AND pug.goods = #{goodsId}
+			AND pug.is_valid = 1 
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<delete id="delectPugProjectId" parameterType="java.lang.Integer">
+		delete from project_update_goods where project=#{projectId}
+	</delete>
+	<delete id="deleteById" parameterType="integer">
+		delete from project_update_goods where id=#{id}
+	</delete>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SysRoleResoureMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.SysRoleResoure">
+		<result column="sys_role" property="sysRole" jdbcType="INTEGER" />
+		<result column="sys_resource" property="sysResource" jdbcType="INTEGER" />
+	</resultMap>
+
+	<sql id="Base_Column_List">
+		sys_role,sys_resource
+	</sql>
+	<select id="queryResourceBySysRole" resultType="java.lang.String" parameterType="java.lang.Integer">
+		select
+		sys_resource
+		from sys_role_resource where
+		sys_role=#{sysRole}
+	</select>
+	<select id="querySysRoleResource" resultMap="BaseResultMap"
+		parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Column_List" />
+		from sys_role_resource where sys_role=#{sysRole}
+	</select>
+	<insert id="saveSysRoleResource" parameterType="com.qrhf.pojo.SysRoleResoure">
+		insert into
+		sys_role_resource (sys_role,sys_resource)
+		values(#{sysRole},#{sysResource})
+	</insert>
+	<delete id="delSysRoleResource" parameterType="java.lang.Integer">
+		delete from
+		sys_role_resource where sys_role=#{sysRole} 
+	</delete>
+	<insert id="initTopResource" parameterType="java.lang.Integer">
+		insert into sys_role_resource
+			(sys_role,sys_resource)
+		select #{sysRoleId},id from sys_resource sr where sr.is_valid = 1
+	</insert>
+</mapper>

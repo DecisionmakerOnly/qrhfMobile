@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Project">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="department_id" property="departmentId" jdbcType="INTEGER" />
+		<result column="user_id" property="userId" jdbcType="INTEGER" />
+		<result column="duty_user" property="dutyUser" jdbcType="INTEGER"/>
+		<result column="duty_user_name" property="dutyUserName" jdbcType="VARCHAR"/>
+		<result column="buyer_id" property="buyerId" jdbcType="VARCHAR" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+		<result column="company" property="company" jdbcType="VARCHAR" />
+		<result column="jurisdiction" property="jurisdiction" jdbcType="INTEGER" />
+		<result column="province" property="province" jdbcType="INTEGER" />
+		<result column="city" property="city" jdbcType="INTEGER" />
+		<result column="area" property="area" jdbcType="INTEGER" />
+		<result column="contract_price" property="contractPrice" jdbcType="DOUBLE" />
+		<result column="manpower_price" property="manpowerPrice" jdbcType="DOUBLE" />
+		<result column="material_price" property="materialPrice" jdbcType="DOUBLE" />
+		<result column="machine_price" property="machinePrice" jdbcType="DOUBLE" />
+	</resultMap>
+	<sql id="Base_Column_List">
+			id, company_id companyId,department_id departmentId,
+			user_id userId,duty_user dutyUser,buyer_id buyerId,name, 
+			createDate createDate,is_valid isValid,is_valid_date isValidDate,
+			province province,city city,area area,contract_price contractPrice,
+			manpower_price manpowerPrice,material_price materialPrice,machine_price machinePrice
+	</sql>
+	
+	<select id="selectProject" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			p.id,
+			p.company_id,
+			p.department_id,
+			p.user_id,
+			d.dutyUserName duty_user_name,
+			p.jurisdiction,
+			p.`name`,
+			p.createDate,
+			p.is_valid,
+			p.is_valid_date
+			FROM
+			project p
+			
+			LEFT JOIN (
+				SELECT
+					dep.id,GROUP_CONCAT(u.user_name) dutyUserName
+				FROM
+					`user` u,
+					department dep,
+					sys_role sr
+				WHERE
+					u.department_id = dep.id
+				AND u.sys_role_id = sr.id
+				AND sr.`code` = "XMJL"
+				GROUP BY (dep.id)
+			) d ON p.department_id = d.id
+			
+			where p.id = #{projectId,jdbcType=INTEGER}
+	</select> 
+	
+	<select id="findList" resultType="com.qrhf.pojo.Project" parameterType="Map">
+		SELECT DISTINCT
+			p.id,
+			p.company_id companyId,
+			p.department_id departmentId,
+			p.user_id userId,
+			(
+				SELECT
+					u.user_name
+				FROM
+					USER u
+				WHERE
+					p.user_id = u.id
+			) userName,
+			dutyUserName,
+			p.`name`,
+			p.jurisdiction,
+			p.createDate,
+			truncate(p1.num,2) budgetAmount,
+			truncate(p2.num,2) consumptionAmount,
+			CONCAT(
+				CONVERT (
+					(p2.num / p1.num) * 100,DECIMAL (18, 2)
+				),"%"
+			) percentage
+		FROM
+			(
+				SELECT
+					*
+				FROM
+					project p
+				WHERE
+					p.is_valid = 1
+				AND p.company_id = #{companyId}	
+				AND (
+						(
+							p.user_id = #{userId}
+						) 
+					OR
+						(
+							p.jurisdiction = 1
+						)
+					OR 
+						(
+							p.jurisdiction = 2 AND p.department_id =#{departmentId}
+						)
+					OR
+						(
+							(select sr.code from sys_role sr where sr.id = (select sys_role_id from user where id = #{userId}) ) in ('TZRDB','TZR','GSCBKZR','GSCWZG')
+						)
+				)
+			) p
+		LEFT JOIN (
+			SELECT
+				pg.project_id id,
+				SUM(pg.amount * pg.price) num
+			FROM
+				project_goods pg 
+			where 
+				pg.is_valid = 1
+			GROUP BY
+				pg.project_id
+		) p1 ON p1.id = p.id
+		LEFT JOIN (
+			SELECT
+				pog.project_id id,
+				SUM(pog.price * pog.amount) num
+			FROM
+				project_order_goods pog
+			WHERE
+				pog.is_valid = 1
+			AND pog. STATUS = 0
+			AND pog.project_order_id IN (
+				select 
+					po.id id
+				from 
+					project_order po,
+					sys_flow sf
+				where  
+					po.id = sf.project_order_id
+				and po.is_valid = 1
+				and sf.`status` = 1
+			)
+			GROUP BY
+				pog.project_id
+		) p2 ON p2.id = p.id
+		LEFT JOIN (
+			SELECT
+				dep.id,GROUP_CONCAT(u.user_name) dutyUserName
+			FROM
+				`user` u,
+				department dep,
+				sys_role sr
+			WHERE
+				u.department_id = dep.id
+			AND u.sys_role_id = sr.id
+			AND sr.`code` = "XMJL"
+			GROUP BY (dep.id)
+		) d ON p.department_id = d.id
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<delete id="del" parameterType="java.lang.Integer">
+		delete from project where id = #{projectId}
+	</delete>
+	<insert id="insert" parameterType="com.qrhf.pojo.Project">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into project (
+		name,is_valid,jurisdiction,user_Id,company_Id,createDate,province,city,area,contract_price,manpower_price,material_price,machine_price)
+		values (
+		#{name,jdbcType=VARCHAR},1,#{jurisdiction,jdbcType=INTEGER},#{userId,jdbcType=INTEGER},#{companyId,jdbcType=INTEGER},curdate(),
+		#{province,jdbcType=INTEGER},
+		#{city,jdbcType=INTEGER},
+		#{area,jdbcType=INTEGER},
+		#{contractPrice,jdbcType=INTEGER},
+		#{manpowerPrice,jdbcType=INTEGER},
+		#{materialPrice,jdbcType=INTEGER},
+		#{machinePrice,jdbcType=INTEGER}
+		)
+	</insert>
+	<update id="updateByPrimaryKey" parameterType="com.qrhf.pojo.Project">
+		update project
+		set
+		department_id = #{departmentId}
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	
+	<select id="statistics" resultType="com.qrhf.pojo.ProjectStatistics"
+		parameterType="map">
+		
+		SELECT
+			pog.as_name NAME,
+			IFNULL(sum(pog.amount), 0) orderAmount,
+			IFNULL(pg.amount, 0) projectAmount,
+			IFNULL(pog.price, 0) orderPrice,
+			IFNULL(pg.price, 0) projectPrice
+		FROM
+			project_order_goods pog,
+			project_order po,
+			project_goods pg
+		WHERE
+			pog.project_id = #{projectId,jdbcType=INTEGER}
+		AND pog.`status` = 0
+		AND po.id = pog.project_order_id
+		AND pog.goods_id = pg.goods_id
+		<if test="(startDate!=''and startDate!=null) and (endDate!=''and endDate!=null)">
+		 	AND po.create_date BETWEEN #{startDate} AND #{endDate}
+		</if>
+		<if test="name!=''and name!=null">
+		 	and pog.as_name like concat('%',#{name},'%')
+		</if>
+		GROUP BY
+			pog.goods_id
+		<!-- SELECT
+			GROUP_CONCAT(CONCAT(pog. NAME)) NAME,
+			GROUP_CONCAT(IFNULL(pog.amount, 0)) orderAmount,
+			GROUP_CONCAT(IFNULL(pog.pgamount, 0)) projectAmount
+		FROM
+			(
+				SELECT
+					pog.as_name NAME,
+					sum(pog.amount) amount,
+					pg.amount pgamount
+				FROM
+					project_order_goods pog,
+					project_order po,
+					project_goods pg
+				WHERE
+					pog.project_id = #{projectId,jdbcType=INTEGER}
+				AND po.create_date BETWEEN #{startDate} AND #{endDate}
+				AND pog.`status` = 0
+				AND po.id = pog.project_order_id
+				AND pog.goods_id = pg.goods_id
+				GROUP BY
+					pog.goods_id
+			) pog -->
+			
+	</select>
+	
+	<!-- <select id="statistics" resultType="com.qrhf.pojo.ProjectStatistics"
+		parameterType="java.lang.Integer">
+		SELECT
+		GROUP_CONCAT(CONCAT("'",pg.`name`,"'")) name,
+		GROUP_CONCAT(IFNULL(pg.price,0)) projectPrice,
+		GROUP_CONCAT(IFNULL(pog2.price1,0)) orderPrice,
+		GROUP_CONCAT(IFNULL(pg.amount,0)) projectAmount,
+		GROUP_CONCAT(IFNULL(pog.amount1,0)) orderAmount
+		FROM
+		(
+		SELECT
+		g.id,
+		g.`name`,
+		pg.price,
+		pg.amount
+		FROM
+		goods g,
+		project_goods pg
+		WHERE
+		pg.is_valid = 1
+		AND pg.goods_id = g.id
+		AND pg.project_id = #{projectId,jdbcType=INTEGER}
+		)
+		pg
+		LEFT JOIN (
+		SELECT
+		pog.goods_id goodsId,
+		sum(pog.amount) amount1
+		FROM
+		project_order_goods pog
+		WHERE
+		pog.is_valid = 1
+		and pog.project_id = #{projectId}
+		GROUP BY
+		pog.goods_id
+		) pog ON pog.goodsId
+		= pg.id
+		LEFT JOIN (
+		SELECT
+		pog.goods_id,
+		(sum(pog.price)/sum(pog.amount))price1
+		FROM
+		(
+		SELECT
+		pog.goods_id,
+		pog.amount,
+		(pog.price * pog.amount) price
+		FROM
+		project_order_goods pog
+		WHERE
+		pog.is_valid = 1
+		and pog.project_id = #{projectId,jdbcType=INTEGER}
+		GROUP BY
+		pog.project_order_id,
+		pog.goods_id
+		) pog
+		GROUP BY
+		pog.goods_id
+		) pog2 ON
+		pog2.goods_id = pg.id
+	</select> -->
+	
+	<select id="selectDuty" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		select 
+		p.duty_user 
+		from project p,user u 
+		where p.id=#{id,jdbcType=INTEGER} 
+		and u.id = (select duty_user from project where id=#{id,jdbcType=INTEGER})
+		and u.is_valid =1
+	</select>
+	
+	<select id="selectDutyCount" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select count(*) parentId from (
+			select p.department_id,sr.id sys_role_id from project p,sys_role sr where p.id = #{projectId} and p.company_id = sr.company_id and (sr.`code` = 'xmjl' or sr.`name` = "项目经理")
+		)p left join user u on u.department_id = p.department_id and u.sys_role_id = p.sys_role_id
+	</select>
+	
+	<select id="selectDutyUser" parameterType="java.lang.Integer" resultType="com.qrhf.vo.Node">
+		select -1 id,"项目负责人" text,null parentId from dual
+		union
+		select u.id id,u.user_name text,-1 parentId from (
+			select p.department_id,sr.id sys_role_id from project p,sys_role sr where p.id = #{projectId} and p.company_id = sr.company_id and (sr.`code` = 'xmjl' or sr.`name` = "项目经理")
+		)p left join user u on u.department_id = p.department_id and u.sys_role_id = p.sys_role_id
+	</select>
+	
+	<update id="updateProjectUpdateResourceAll" parameterType="java.util.List">
+		<foreach collection="purList" item="item" separator=";">  
+           update project_update_resource set is_update_price = #{item.isUpdatePrice},is_update_amount = #{item.isUpdateAmount} where id = #{item.id} 
+       </foreach>  
+	</update>
+	
+	<update id="updateProjectGoodsAll" parameterType="java.util.List">
+		<foreach collection="pgList" item="item" separator=";">  
+           update project_goods set price=#{item.price},amount=#{item.amount} where id = #{item.id}
+       </foreach>  
+	</update>
+	
+	<delete id="deleteGoodsAll" parameterType="java.lang.Integer">
+		delete from project_goods where project_id = #{projectId}
+	</delete>
+	<select id="checkProjectName" resultType="com.qrhf.pojo.Project">
+		select * from project where company_id = #{companyId}
+		<if test="id!=0">
+			and name = #{name} and id!=#{id}
+		</if>
+		<if test="id==0">
+			and name = #{name}
+		</if>
+	</select>
+	<select id="contrastProjectGoods" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+			SELECT
+				COUNT(ss.num) number
+			FROM
+			(
+					(
+						SELECT
+							pg.project_id,
+							SUM(pg.amount) num
+						FROM
+							project_goods pg
+						WHERE
+							pg.is_valid = 1
+						AND pg.project_id = #{projectId}
+						GROUP BY
+							pg.project_id
+					) ss,
+					(
+						SELECT
+							pog.project_id,
+							SUM(pog.amount) num2
+						FROM
+							project_order_goods pog
+						WHERE
+							pog.is_valid = 1
+						AND pog.project_id = #{projectId}
+						AND pog.`status`=0
+						AND pog.project_order_id IN (
+							SELECT
+								po.id
+							FROM
+								project_order po
+							WHERE
+								po.is_valid = 1
+						)
+						GROUP BY
+							pog.project_id
+					) pogg
+				)
+			WHERE
+				pogg.num2 <![CDATA[>= ]]>ss.num
+	</select>
+	
+	<select id="selectStaff" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT
+			p.id id,
+			u.id uId,
+			p. NAME NAME
+		FROM
+			USER u,
+			department d,
+			project p
+		WHERE
+			u.department_id = d.id
+		AND p.department_id = d.id
+		AND p.id = #{projectId}
+		AND p.is_valid = 1
+		
+		
+		<!-- SELECT
+			p.id id,
+			u.id uId,
+			p. NAME NAME
+		FROM
+			project p,
+			USER u
+		WHERE
+			p.id = #{projectId}
+		AND p.is_valid = 1
+		AND p.company_id = u.company_id
+		AND u.id != #{userId} -->
+	</select>
+	<select id="getWholeCheckBox" resultType="com.qrhf.vo.Node" parameterType="Map">
+		<if test="departmentId!=0">
+			SELECT
+				p.id id,
+				concat(p.name,'---解除绑定') text,
+				NULL parentId
+			FROM
+				project p
+			WHERE
+				p.department_id =  #{departmentId}
+		</if>
+		<if test="departmentId==0">
+			SELECT
+				- 1 id,
+				'工程项目' text,
+				NULL parentId
+			FROM
+				DUAL
+			UNION SELECT
+				p.id id,
+				p.name text,
+				-1 parentId
+			FROM
+				project p
+			WHERE
+				p.company_id =  #{companyId}
+			and	(p.department_id is null or p.department_id = 0)
+		</if>
+	</select>
+	<select id="returnCheckBox" resultType="java.lang.String" parameterType="java.lang.Integer">
+		SELECT
+			id
+		FROM
+			project
+		WHERE
+			department_id = #{departmentId}
+	</select>
+    <select id="queryDepartmentProject" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			*
+		FROM
+			project
+		WHERE
+			department_id = #{departmentId}
+	</select>
+	<update id="updateProjectDepartment" parameterType="com.qrhf.pojo.Project">
+		UPDATE 
+		project
+		SET
+		department_id = #{departmentId} 
+		where
+		id in (#{departmentProject})
+	</update>
+	<update id="updateProjectDepartmentId" parameterType="com.qrhf.pojo.Project">
+		UPDATE 
+		project
+		SET
+		department_id = null
+		where
+		company_id = #{companyId}
+	</update>
+	<select id="selectProjectQuantity" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT 
+			COUNT(id) number 
+		FROM 
+			project 
+		WHERE
+			company_id=#{companyId}
+	</select>
+	<update id="updateDepartmentId" parameterType="java.lang.Integer">
+		update project set department_id = #{departmentId} where id = #{projectId}
+	</update>
+	<update id="getCompanyUpdateDepartmentId" parameterType="java.lang.Integer">
+		UPDATE project SET department_id=NULL WHERE department_id=#{departmentId} AND company_id=#{companyId}
+	</update>
+	<update id="deleteDepartmentByDepartmentId" parameterType="java.lang.String">
+		update project set department_id = NULL where department_id in( ${departmentIds})
+	</update>
+	<select id="selectByProjectPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		select
+			name name
+		from 
+			project
+		where 
+			id = #{projectId,jdbcType=INTEGER}
+	</select>
+</mapper>

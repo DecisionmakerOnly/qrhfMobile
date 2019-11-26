@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ContractListMapper">
+	<sql id="Base_Column_List">
+		id, name, logo, content, authentication, code, is_valid,
+		is_valid_date,create_date
+	</sql>
+	<insert id="save" parameterType="com.qrhf.pojo.ContractList">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into contract_list 
+			(id,project_id,project_order_id,contract_id,name,create_date,is_valid)
+		values 
+			(#{id},#{projectId},#{projectOrderId},${contractId},#{name},curdate(),1)
+	</insert>
+	<delete id="contractListDel" parameterType="java.lang.Integer">
+		delete from contract_list where project_order_id=#{projectOrderId}
+	</delete>
+	<delete id="delContractListId"> 
+		delete from contract_list where id = #{contractListId}
+	</delete>
+</mapper>

@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ContractListGoodsMapper">
+	<resultMap type="com.qrhf.pojo.ContractListGoods" id="BaseResultMap">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="project_id" property="projectId" jdbcType="INTEGER"/>
+		<result column="project_order_id" property="projectOrderId" javaType="INTEGER"/>
+		<result column="contract_list_id" property="contractListId" javaType="INTEGER"/>
+		<result column="goods_id" property="goodsId" javaType="INTEGER"/>
+		<result column="price" property="price" javaType="DECIMAL"/>
+		<result column="amount" property="amount" jdbcType="DECIMAL" />
+		<result column="total" property="total" jdbcType="DECIMAL" />
+		<result column="as_name" property="asName" jdbcType="VARCHAR"/>		
+	</resultMap>
+	<sql id="Base_Column_List">
+		id, project_id,project_order_id,contract_list_id, goods_id, price, amount, total,as_name
+	</sql>
+	<select id="findProjectOrder" parameterType="java.lang.Integer" resultType="com.qrhf.vo.ContractListGoodsVO">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.as_name asName,
+			pog.price price,
+			pog.amount amount,
+			pog.total total
+		from
+			project_order_goods pog,
+			goods g
+		where
+			pog.project_order_id = #{projectOrderId}
+		and pog.goods_id = g.id
+			
+	
+	
+<!-- 	  SELECT -->
+<!-- 			po.projectOrderId projectOrderId, -->
+<!-- 			po.goodsId goodsId, -->
+<!-- 			po. CODE CODE, -->
+<!-- 			po.asName asName, -->
+<!-- 			po.`name` NAME, -->
+<!-- 			po.type type, -->
+<!-- 			po.unit unit, -->
+<!-- 			po.price price, -->
+<!-- 			pamount - IFNULL(gamount, 0) budgetAmount -->
+<!-- 		FROM -->
+<!-- 			( -->
+<!-- 				SELECT -->
+<!-- 					CASE -->
+<!-- 				WHEN g. NAME IS NULL THEN -->
+<!-- 					pg.as_name -->
+<!-- 				ELSE -->
+<!-- 					g. NAME -->
+<!-- 				END AS NAME, -->
+<!-- 				pg.as_name projectName, -->
+<!-- 				pog.project_Id projectId, -->
+<!-- 				pog.project_order_id projectOrderId, -->
+<!-- 				pog.as_name asName, -->
+<!-- 				pog.price price, -->
+<!-- 				g.id goodsId, -->
+<!-- 				g.`code`, -->
+<!-- 				g.type, -->
+<!-- 				g.unit, -->
+<!-- 				pog.goods_id pid, -->
+<!-- 				pog.amount pamount -->
+<!-- 			FROM -->
+<!-- 				project_order_goods pog, -->
+<!-- 				goods g, -->
+<!-- 				project_goods pg -->
+<!-- 			WHERE -->
+<!-- 				pog.project_order_id = #{projectOrderId} -->
+<!-- 			AND pg.is_valid = 1 -->
+<!-- 			AND pg.goods_id = pog.goods_id -->
+<!-- 			AND pog.goods_id = g.id -->
+<!-- 			GROUP BY -->
+<!-- 				pog.goods_id -->
+<!-- 			) po -->
+<!-- 		LEFT JOIN ( -->
+<!-- 			SELECT -->
+<!-- 				clg.goods_id gid, -->
+<!-- 				SUM(clg.amount) gamount -->
+<!-- 			FROM -->
+<!-- 				contract_list_goods clg -->
+<!-- 			WHERE -->
+<!-- 				clg.project_order_id = #{projectOrderId} -->
+<!-- 			GROUP BY -->
+<!-- 				clg.goods_id -->
+<!-- 		) clg ON clg.gid = po.pid -->
+<!-- 		WHERE -->
+<!-- 			pamount > (IFNULL(gamount, 0))  -->
+	</select>
+	<select id="findList" resultType="com.qrhf.pojo.ContractListGoods" parameterType="Map">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			clg.as_name asName,
+			cast((sum(clg.total)/sum(clg.amount)) as decimal(18,2)) price,
+			sum(clg.amount) amount,
+			cast(sum(clg.total) as decimal(18,2)) total
+		from 
+			contract_list_goods clg,
+			goods g
+		where 
+			clg.goods_id = g.id
+		<if test="projectId!=0">
+			and clg.project_id = #{projectId} 
+		</if>
+		<if test="contractListId!=0">
+			and clg.contract_list_id = #{contractListId}  
+		</if>
+		<if test="contractListId==0">
+			 and clg.contract_list_id in (select cl.id from contract_list cl where cl.contract_id = #{contractId})   
+		</if>
+		 	 group by clg.goods_id
+		<if test="a!=null">
+			LIMIT #{a},#{b} 
+		</if>
+	</select>
+	<select id="findContractListGoodsList" resultType="com.qrhf.pojo.ContractListGoods" parameterType="java.lang.Integer">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			clg.as_name asName,
+			cast((sum(clg.total)/sum(clg.amount)) as decimal(18,2)) price,
+			sum(clg.amount) amount,
+			cast(sum(clg.total) as decimal(18,2)) total
+		from 
+			contract_list_goods clg,
+			goods g
+		where 
+			clg.goods_id = g.id
+		and clg.contract_list_id in (select id from contract_list where contract_id = #{contractId})
+	</select>
+	<insert id="saves" parameterType="java.lang.Integer">
+		insert into contract_list_goods
+			(project_id,project_order_id,contract_list_id,goods_id,as_name,price,amount,total)
+		select 
+			project_id,project_order_id,#{contractListId},goods_id,as_name,price,amount,total 
+		from 
+			project_order_goods
+		where project_order_id = #{projectOrderId}
+		order by id
+		
+<!-- 			<foreach collection="list" item="item" index="index" separator=","> -->
+<!-- 				(#{item.projectId}, -->
+<!-- 				#{item.projectOrderId}, -->
+<!-- 				#{item.contractListId}, -->
+<!-- 				#{item.goodsId}, -->
+<!-- 				#{item.asName}, -->
+<!-- 				#{item.price}, -->
+<!-- 				#{item.budgetAmount}, -->
+<!-- 				(#{item.price}*#{item.budgetAmount})) -->
+<!-- 			</foreach> -->
+	</insert>
+	<delete id="contractListGoodsDel"  parameterType="java.lang.Integer">
+		delete from contract_list_goods where project_order_id=#{projectOrderId}
+	</delete>
+	<delete id="delContractListGoodsId" >
+		delete from contract_list_goods where contract_list_id in (select id from contract_list where id = #{contractListId})
+	</delete>
+	<delete id="delContractListGoodsByIds" >
+		delete from project_order_goods where id in (#{ids})
+	</delete>
+	<select id="findGoodsByContractId" parameterType="java.lang.Integer" resultType="com.qrhf.vo.ContractListGoodsVO">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.as_name asName,
+			pog.price price,
+			sum(pog.amount) amount
+		from
+			project_order_goods pog,
+			goods g
+		where
+			pog.contract_id = #{contractId}
+		and pog.goods_id = g.id
+		group by pog.goods_id
+	</select>
+	<select id="findGoodsByProjectId" parameterType="java.lang.Integer" resultType="com.qrhf.vo.ContractListGoodsVO">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.as_name asName,
+			pog.price price,
+			sum(pog.amount) amount
+		from
+			project_order_goods pog,
+			goods g
+		where
+			pog.contract_id = #{contractId}
+		and	pog.project_id = #{projectId}
+		and pog.goods_id = g.id
+		group by pog.goods_id
+	</select>
+	<select id="findGoodsByProjectOrderId" parameterType="java.lang.Integer" resultType="com.qrhf.vo.ContractListGoodsVO">
+		select
+			g.name name,
+			g.code code,
+			g.type type,
+			g.unit unit,
+			pog.id id,
+			pog.as_name asName,
+			pog.price price,
+			pog.amount amount,
+			pog.total total
+		from
+			project_order_goods pog,
+			goods g
+		where
+			pog.project_order_id = #{projectOrderId}
+		and pog.goods_id = g.id
+	</select>
+</mapper>

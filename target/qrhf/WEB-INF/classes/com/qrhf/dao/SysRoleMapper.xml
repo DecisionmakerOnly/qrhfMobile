@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SysRoleMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.SysRole">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="role_id" property="RoleId" jdbcType="INTEGER" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,company_id companyId,name name, code code,
+		create_date createDate,is_valid isValid,
+		is_valid_date isValeDate
+	</sql>
+	
+	<select id="checkRoleCode" parameterType="Integer" resultType="Integer">
+		SELECT
+			count(us.id)
+		FROM
+			(
+				SELECT
+					sr.id,
+					sr. NAME,
+					sr. CODE
+				FROM
+					sys_role sr,
+					USER u
+				WHERE
+					u.sys_role_id = sr.id
+				AND sr.id = #{id}
+				AND sr.`code`='TZRDB'
+			) us,
+			role r
+		WHERE
+			us. NAME = r. NAME
+		AND us. CODE = r. CODE
+	</select>
+	<select id="selectName" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+			count(id)
+		FROM
+			sys_role
+		WHERE
+			id = #{id}
+		AND `code` = 'TZRDB'
+	</select>
+	<select id="selectInvestorsCode" parameterType="Integer" resultType="String">
+		SELECT
+			sr. CODE
+		FROM
+			sys_role sr,
+			USER u
+		WHERE
+			u.id = #{userId}
+		AND u.sys_role_id = sr.id
+	</select>
+	
+	<select id="getRoleById" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		select <include refid="Base_Column_List" /> from sys_role where id = #{id,jdbcType=INTEGER}
+	</select>
+	
+	<select id="getRoleByUserId" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		select <include refid="Base_Column_List" /> from sys_role where id = (select sys_role_id from user u where u.id = #{id,jdbcType=INTEGER})
+	</select>
+	<select id="getUserIdRole" resultMap="BaseResultMap">
+		SELECT
+			sro.`code`
+		FROM
+			`user` u,
+			sys_role sro
+		WHERE
+			u.id = #{userId}
+			AND u.sys_role_id = sro.id
+			AND sro.is_valid=1
+	</select>
+ 	<select id="findList" resultType="com.qrhf.pojo.SysRole" parameterType="Map">
+<!-- 		SELECT -->
+<!-- 			sr.id id, -->
+<!-- 			sr.`name` name, -->
+<!-- 			sr.`code` code, -->
+<!-- 			sr.create_date createDate -->
+<!-- 		from  -->
+<!-- 			sys_role sr LEFT JOIN role r on r.`code`=sr.`code`  -->
+<!-- 		where  -->
+<!-- 			sr.company_id = #{companyId} and sr.is_valid=1 -->
+<!-- 			ORDER BY r.orderby desc -->
+		SELECT
+			sr.id id,
+			sr.`name` name,
+			sr.`code` code,
+			sr.create_date createDate,
+			r.orderby
+		from 
+			sys_role sr LEFT JOIN role r on r.`code`=sr.`code`  
+		where 
+			sr.company_id = #{companyId} AND sr.is_valid=1
+			order by case when r.orderby is null then sr.id  ELSE r.orderby end
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+	
+	<!-- <select id="findMyCompanyRole" resultType="com.qrhf.pojo.SysRole" parameterType="java.lang.Integer">
+		SELECT
+			id,
+			NAME
+		FROM
+			sys_role
+		WHERE
+			company_id = #{companyId}
+		AND role_id IS NULL
+		UNION
+			SELECT
+				sr.id id,
+				r. NAME NAME
+			FROM
+				sys_role sr,
+				role r
+			WHERE
+				company_id = #{companyId}
+			AND role_id IS NOT NULL
+			AND sr.role_id = r.id
+	</select> -->
+	
+	<select id="findMyCompanyRole" resultType="com.qrhf.pojo.SysRole" parameterType="java.lang.Integer">
+		select id,name,code from sys_role where company_id = 0 
+		<if test="_parameter != null">
+			 or (company_id = #{_parameter} and `code`<![CDATA[!= ]]>'TZRDB')
+		</if>
+	</select> 
+	<select id="roleByRoleName" resultType="com.qrhf.pojo.SysRole" parameterType="Map">
+		SELECT
+		<include refid="Base_Column_List" />
+		from sys_role where company_id = #{companyId} and code=#{code}
+	</select>
+	
+	<select id="checkRepeat" resultType="java.lang.Integer" parameterType="com.qrhf.pojo.SysRole">
+		SELECT
+			count(id)
+		FROM
+			sys_role
+		WHERE
+			company_id = #{companyId}
+		AND (CODE = #{code} OR NAME = #{name})
+	</select>
+	
+	<delete id="deleteUserRoleById" parameterType="java.lang.Integer">
+		delete from
+		sys_role
+		where id = #{id,jdbcType=INTEGER}
+	</delete>
+	<insert id="add" parameterType="com.qrhf.pojo.SysRole">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into sys_role 
+			(company_id,name,code,create_date,is_valid)
+		values 
+			(#{companyId},#{name},#{code},CURDATE(),1)
+	</insert>
+	<update id="update" parameterType="com.qrhf.pojo.SysRole">
+		update sys_role
+		<set>
+			<if test="companyId != null">
+				company_id = #{companyId,jdbcType=INTEGER},
+			</if>
+			<if test="name != null">
+				name = #{name,jdbcType=VARCHAR},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=VARCHAR},
+			</if>
+			<if test="createDate != null">
+				create_date = #{createDate,jdbcType=DATE},
+			</if>
+			<if test="isValid != null">
+				is_valid = #{isValid,jdbcType=VARCHAR},
+			</if>
+			<if test="isValidDate != null">
+				is_valid_date = #{isValidDate,jdbcType=DATE},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	<update id="updateByPrimaryKey" parameterType="com.qrhf.pojo.SysRole">
+		update sys_role
+		set
+		company_id = #{companyId,jdbcType=INTEGER},
+		name =
+		#{name,jdbcType=VARCHAR},
+		code = #{code,jdbcType=VARCHAR},
+		create_date =
+		#{createDate,jdbcType=DATE},
+		is_valid =
+		#{isValid,jdbcType=INTEGER},
+		is_valid_date =
+		#{isValidDate,jdbcType=DATE}
+		where id =
+		#{id,jdbcType=INTEGER}
+	</update>
+	<select id="getUserCode" resultMap="BaseResultMap" parameterType="java.lang.Integer">
+		SELECT
+			u.id userId
+		FROM
+			sys_role sr
+			LEFT JOIN `user` u ON u.sys_role_id = sr.id AND u.is_valid = 1
+		WHERE
+			sr.company_id = #{companyId}
+		AND sr.`code` = 'TZRDB'
+		AND sr.is_valid = 1
+	</select>
+	<select id="userSysRole" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+			COUNT(sr.id) number
+		FROM
+			sys_role sr
+		WHERE
+			sr.id = #{sysRoleId}
+		AND sr.`code` = 'TZRDB'
+		AND sr.company_id = #{companyId}
+		AND sr.is_valid=1
+	</select>
+	<select id="getSysRoleCompanyId" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT u.id FROM `user` u WHERE u.sys_role_id in (select sr.id sysRoleId FROM sys_role sr where sr.company_id= #{companyId} AND sr.`code`='TZRDB') AND u.company_id=#{companyId} AND u.is_valid=1
+	</select>
+	<select id="selectInvestorsCodeAndPay" resultType="com.qrhf.pojo.SysRole" parameterType="java.lang.Integer">
+		SELECT
+			sr. CODE,
+			COUNT(pao.order_amount) notOrPay
+		FROM
+			sys_role sr,
+			USER u,
+			payment_order pao
+		WHERE
+			u.id = #{userId}
+		AND u.sys_role_id = sr.id
+		AND pao.company_id=u.company_id
+		AND pao.is_valid=1
+		AND pao.pay_status=1
+	</select>
+	<select id="sysResourceDefault"  resultType="java.lang.String" parameterType="java.lang.Integer">
+		SELECT
+			srd.sys_resource
+		FROM
+			sys_resource_default srd
+		WHERE
+			srd.`code` = (
+				SELECT
+					sr.`code`
+				FROM
+					sys_role sr
+				WHERE
+					sr.id = #{sysRoleId}
+			)
+	</select> 
+</mapper>

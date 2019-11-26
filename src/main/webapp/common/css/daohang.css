@@ -1,0 +1,55 @@
+.div-bj{
+	background:url("../images/beijing.png") no-repeat 0px 0px;
+	background-size: cover;
+	min-height: 455px;
+}
+.navbar .nav > li .dropdown-menu {
+    margin: 0;
+}
+.navbar .nav > li:hover .dropdown-menu {
+    display: block;
+}
+.div-1{
+	 margin:0 auto;
+	 left:120px;
+	 top:45px;
+	 height:400px;
+	 width:680px;
+	 font-size: 20px;
+	 position: absolute;
+	 font-family: 'Noto Serif CJK SC', 'Noto Serif CJK', 'Source Han Serif SC', ‘Source Han Serif’, source-han-serif-sc, serif;
+}
+.div-2{
+	color:white;
+	width:500px;
+	height:300px;
+	margin-left:110px;
+	margin-top:150px;
+}
+.div-p{
+	margin: 0px; 
+	padding: 0px; 
+	line-height: 24px;
+	margin-top: 100px;
+} 
+.div-p1{
+	margin: 0px; 
+	padding: 0px; 
+	line-height: 24px;
+}
+.div-p2{
+	text-indent: 2em;
+	margin: 0px; 
+	padding: 0px; 
+	line-height: 24px;
+}
+.div-3{
+	width: 132px;
+	display: none;
+	position:fixed;
+	right:620px;
+  	top:150px;
+   	z-index:10008;
+    padding: 10px; 
+    font-size: 12px;
+}

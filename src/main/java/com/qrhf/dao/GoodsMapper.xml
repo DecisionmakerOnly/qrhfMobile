@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.GoodsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Goods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="type" property="type" jdbcType="VARCHAR" />
+		<result column="unit" property="unit" jdbcType="VARCHAR" />
+		<result column="goods_type" property="goodsType" jdbcType="VARCHAR" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,company_id companyId,name name,code code,type type,unit unit
+	</sql>
+	
+	<select id="findList" resultType="com.qrhf.pojo.Goods" parameterType="Map">
+		select
+		<include refid="Base_Column_List" />
+		from goods
+		<where>
+			<if test="goodsType!=null">
+				 goods_type=#{goodsType}
+			</if> 
+			<if test="goodsName!=null">
+				and name like #{goodsName}
+			</if>
+			<if test="goodsCode!=null">
+				and code like #{goodsCode}
+			</if>
+		</where>
+		 
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	 <select id="getGoodsById" resultType="com.qrhf.pojo.Goods" parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Column_List" />
+		from goods where id=#{id}
+	</select> 
+	<delete id="deleteGoodsProjectId" parameterType="java.lang.Integer">
+		delete from goods where company_id=#{companyId}
+	</delete>
+	<select id="selectByPrimaryKey" resultMap="BaseResultMap"
+		parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Column_List" />
+		from goods
+		where id = #{id,jdbcType=INTEGER}
+	</select>
+	<select id="selectByNameAndCode" resultType="java.lang.Integer"
+		parameterType="com.qrhf.pojo.Goods">
+		select count(*) from goods
+		where
+		name = #{name,jdbcType=VARCHAR}
+		and type = #{type,jdbcType=VARCHAR}
+	</select>
+	<insert id="insertSelective" parameterType="com.qrhf.pojo.Goods">
+		insert into goods
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id,
+			</if>
+			<if test="name != null">
+				name,
+			</if>
+			<if test="code != null">
+				code,
+			</if>
+			<if test="type != null">
+				type,
+			</if>
+			<if test="unit != null">
+				unit,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				#{id,jdbcType=INTEGER},
+			</if>
+			<if test="name != null">
+				#{name,jdbcType=VARCHAR},
+			</if>
+			<if test="code != null">
+				#{code,jdbcType=VARCHAR},
+			</if>
+			<if test="type != null">
+				#{type,jdbcType=VARCHAR},
+			</if>
+			<if test="unit != null">
+				#{unit,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+	<update id="updateByPrimaryKeySelective" parameterType="com.qrhf.pojo.Goods">
+		update goods
+		<set>
+			<if test="name != null">
+				name = #{name,jdbcType=VARCHAR},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=VARCHAR},
+			</if>
+			<if test="type != null">
+				type = #{type,jdbcType=VARCHAR},
+			</if>
+			<if test="unit != null">
+				unit = #{unit,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	<update id="updateByPrimaryKey" parameterType="com.qrhf.pojo.Goods">
+		update goods
+		set
+		name = #{name,jdbcType=VARCHAR},
+		code = #{code,jdbcType=VARCHAR},
+		type = #{type,jdbcType=VARCHAR},
+		unit = #{unit,jdbcType=VARCHAR}
+		where
+		id = #{id,jdbcType=INTEGER}
+	</update>
+	<select id="selectAllGoods" resultMap="BaseResultMap">
+		SELECT * FROM goods
+		WHERE
+		1=1
+	</select>
+	<insert id="insertAll" parameterType="com.qrhf.pojo.Goods">
+		insert into goods (name,code,type,unit) values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.name},#{item.code},#{item.type},#{item.unit})
+		</foreach>
+	</insert>
+	<select id="findGoodsTypeTreeList" resultType="com.qrhf.vo.Node">
+		select -1 id,'商品类别' text,null parentId from dual
+		union
+		select * from (select a.id,a.type_name,a.goods_type parentId from
+		goods_type a where a.Is_Valid =1)a
+	</select>
+	
+<!--  	 <select id="queryCode" resultType="com.qrhf.pojo.ProjectGoods">	
+		select *
+		from goods
+		where (project_id = 0 or project_id = #{projectId})
+		and code in
+		<foreach collection="list" item="item" open="(" close=")" separator=",">
+			#{item.code}  
+		</foreach> 
+	</select>  --> 
+	
+ 	 <select id="queryCodes" resultMap="BaseResultMap">	
+		select 
+		<include refid="Base_Column_List" />
+		from goods
+		where (company_id = 0 or company_id = #{companyId})
+		and code in
+		<foreach collection="list" item="item" open="(" close=")" separator=",">
+			#{item.code}  
+		</foreach> 
+	</select>  
+	
+<!-- 	<insert id="addGoods" parameterType="com.qrhf.pojo.ProjectGoods"> 
+		insert into goods (project_id,name,code,type,unit)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.projectId},#{item.name},#{item.code},#{item.type},#{item.unit})
+		</foreach>
+	</insert>  -->
+	
+	<insert id="insertGoods" parameterType="com.qrhf.pojo.Goods"> 
+		insert into goods (company_id,name,code,type,unit)
+		values
+		<foreach collection="set" item="item" separator=",">
+			(#{item.companyId},#{item.name},#{item.code},#{item.type},#{item.unit})
+		</foreach>
+	</insert>
+	
+	<insert id="insert" parameterType="com.qrhf.pojo.Goods">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into goods (
+			company_id,name,code,type,unit)
+		values (
+			#{companyId},#{name},#{code},#{type},#{unit}
+		)
+	</insert>
+	
+	<select id="findSystemGoods" resultType="com.qrhf.pojo.Goods" parameterType="Map">
+		SELECT
+			g.id id,
+			g.code code,
+			g.name name,
+			g.type type,
+			g.unit unit
+		FROM
+			goods g
+		WHERE
+			g.company_id = 0
+		AND g.id not in (select goods_id from project_goods where project_id = #{projectId})
+		AND g.id not in (select goods from project_update_goods where project_update = #{projectUpdateId})
+		<if test="searchName!=''and searchName!=null">
+		 	AND (g.name like #{searchName} or g.code=#{searchCode})
+		</if>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="findCompanyCustomGoods" resultType="com.qrhf.pojo.Goods" parameterType="Map">
+		SELECT
+			g.id id,
+			g.code code,
+			g.name name,
+			g.type type,
+			g.unit unit
+		FROM
+			goods g
+		WHERE
+			g.company_id = #{companyId}
+		AND g.id not in (select goods_id from project_goods where project_id = #{projectId})
+		AND g.id not in (select goods from project_update_goods where project_update = #{projectUpdateId})
+		<if test="searchName!=''and searchName!=null">
+		 	AND (g.name like #{searchName} or g.code=#{searchCode})
+		</if>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<insert id="addCompanyCustomGoods" parameterType="com.qrhf.pojo.Goods">
+		insert into goods (company_id,name,code,type,unit) values (#{companyId},#{name},#{code},#{type},#{unit})
+	</insert>
+	
+</mapper>

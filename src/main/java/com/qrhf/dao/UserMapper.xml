@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.UserMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.User">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="sys_role_id" property="sysRoleId" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="department_id" property="departmentId" jdbcType="INTEGER" />
+		<result column="user_name" property="userName" jdbcType="VARCHAR" />
+		<result column="login_name" property="loginName" jdbcType="VARCHAR" />
+		<result column="password" property="password" jdbcType="VARCHAR" />
+		<result column="phone" property="phone" jdbcType="VARCHAR" />
+		<result column="email" property="email" jdbcType="VARCHAR" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="expiry_date" property="ExpiryDate" jdbcType="DATE" />
+		<result column="push_times" property="pushTimes" jdbcType="INTEGER" />
+		<result column="is_payment" property="isPayment" jdbcType="INTEGER" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,sys_role_id sysRoleId,company_id companyId,department_id
+		departmentId,user_name userName,login_name loginName,password
+		password,phone phone,email email,is_valid isValid,is_valid_date
+		isValidDate,create_date createDate,push_times pushTimes,expiry_date ExpiryDate,is_payment isPayment
+	</sql>
+	
+ 	<select id="findList" resultType="com.qrhf.pojo.User" parameterType="Map">
+<!-- 		select  -->
+<!-- 			u.id id, -->
+<!-- 			u.company_id companyId, -->
+<!-- 			u.department_id departmentId, -->
+<!-- 			u.user_name userName, -->
+<!-- 			(select sr.`name` from sys_role sr where sr.id in (u.sys_role_id)) roleName, -->
+<!-- 			(select sr.`code` from sys_role sr where sr.id in (u.sys_role_id)) code, -->
+<!-- 			u.is_valid isValid, -->
+<!-- 			u.create_date createDate -->
+<!-- 			from user u where u.company_id = #{companyId} and u.is_valid = 1 -->
+		select 
+			u.id id,
+			u.company_id companyId,
+			u.department_id departmentId,
+			u.user_name userName,
+			sr.`name` roleName,
+			sr.`code` code,
+			u.is_valid isValid,
+			u.create_date createDate,
+			u.expiry_date ExpiryDate,
+			r.orderby
+			from user u LEFT JOIN sys_role sr ON sr.id =u.sys_role_id 
+			LEFT JOIN role r ON r.`code` =sr.`code`
+			where u.company_id =#{companyId} and u.is_valid = 1 
+			<if test="departmentId!=-1">
+				and department_id=#{departmentId}
+			</if>
+			order by case when r.orderby is null then sr.id  ELSE r.orderby end
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select> 
+	
+	<select id="getUserById" parameterType="java.lang.Integer"
+		resultMap="BaseResultMap">
+		SELECT
+		<include refid="Base_Column_List" />
+		FROM `user` u WHERE
+		u.id=#{id}
+	</select>
+	<select id="loginByUserName" resultMap="BaseResultMap" parameterType="com.qrhf.pojo.User">
+		SELECT
+			u.id id,
+			u.sys_role_id sysRoleId,
+			(select sr.code from sys_role sr where u.sys_role_id = sr.id) roleCode,
+			u.company_id companyId,
+			u.department_id departmentId,
+			u.user_name userName,
+			u.login_name loginName,
+			u.password password,
+			u.phone phone,
+			u.email email,
+			u.is_valid isValid,
+			u.expiry_date ExpiryDate,
+			c.name companyName,
+			c.code companyCode
+		FROM
+			`user` u
+		LEFT JOIN 
+			company c ON c.id = u.company_id
+		WHERE
+			u.is_valid = 1
+		AND c.is_valid = 1
+		AND (u.login_name = #{loginName} or u.phone=#{loginName} or u.email=#{loginName})
+	</select>
+	<select id="loginByUser" resultMap="BaseResultMap" parameterType="com.qrhf.pojo.User">
+		SELECT
+		u.*
+		FROM
+		`user` u
+		LEFT JOIN company c ON c.id = u.company_id
+		WHERE
+		u.is_valid = 1
+		AND c.is_valid = 1
+		AND (u.login_name = #{loginName} or u.phone=#{loginName} or
+		u.email=#{loginName})
+	</select>
+	<select id="checkPhone" resultMap="BaseResultMap" parameterType="com.qrhf.pojo.User">
+		select
+		<include refid="Base_Column_List" />
+		from user where phone=#{phone,jdbcType=VARCHAR} AND is_valid=1
+	</select>
+	<select id="checkEmail" resultMap="BaseResultMap">
+		select <include refid="Base_Column_List" />
+		from user where 
+		<if test="id!=0">
+			id != #{id}
+			AND((#{loginType} = 1 and phone = #{chare})
+			OR	(#{loginType} = 2 and email = #{chare}))
+		</if>
+		<if test="id==0">
+				((#{loginType} = 1 and phone = #{chare})
+			OR	(#{loginType} = 2 and email = #{chare}))
+		</if>
+			AND is_valid=1 
+	</select>
+	<select id="findDutyUser" resultType="com.qrhf.pojo.User" parameterType="Map">
+		SELECT
+			u.id id,u.user_name userName,sr.`name` name
+		FROM
+			`user` u,sys_role sr
+		WHERE
+			u.sys_role_id = sr.id
+			AND sr.`code` = 'XMJL' 
+			AND u.company_id = #{companyId}
+			AND u.is_valid =1
+	</select>
+	
+	<select id="selectManager" parameterType="com.qrhf.pojo.User" resultType="com.qrhf.pojo.User">
+		SELECT
+			u.id id,
+			u.user_name userName
+		FROM
+			`user` u,
+			sys_role sr
+		WHERE
+			u.company_id = #{companyId}
+		AND u.department_id = #{departmentId}
+		AND u.sys_role_id = sr.id
+		AND sr.`code` = 'XMJL'
+	</select>
+	
+	<select id="selectBuyer" parameterType="com.qrhf.pojo.User" resultType="com.qrhf.pojo.User">
+		SELECT
+			u.id id,
+			u.user_name userName
+		FROM
+			`user` u,
+			sys_role sro
+		WHERE
+			sro.company_id = #{companyId}
+		AND u.department_id = #{departmentId}
+		AND u.sys_role_id = sro.id
+		AND (
+			OR sro.`name` = '材料员'
+			OR sro.`code` = 'CLY'
+		)
+	</select>
+	
+	<insert id="addUser" parameterType="com.qrhf.pojo.User">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO `user`
+			(sys_role_id,company_id,department_id,user_name,login_name,password,phone,email,is_valid,create_date,expiry_date,is_payment)
+		VALUES
+			(#{sysRoleId},#{companyId},#{departmentId},#{userName},#{loginName},#{password},#{phone},#{email},1,CURDATE(),date_add(CURDATE(), interval 1 month),0)
+	</insert>
+	<insert id="addOrdinaryUser" parameterType="com.qrhf.pojo.User">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO `user`
+		(sys_role_id,company_id,department_id,user_name,login_name,password,phone,email,is_valid,is_valid_date,create_date,expiry_date,is_payment)
+		VALUES
+		(#{sysRoleId},#{companyId},#{departmentId},#{userName},#{loginName},#{password},#{phone},#{email},1,#{isValidDate},CURDATE(),date_add(CURDATE(), interval 1 month),0)
+	</insert>
+	<update id="updateUser" parameterType="com.qrhf.pojo.User">
+		update user
+		<set>
+			<if test="userName != null">
+				user_name = #{userName},
+			</if>
+			<if test="email != null">
+				email = #{email},
+			</if>
+			<if test="sysRoleId != null">
+				sys_role_id = #{sysRoleId},
+			</if>
+		</set>
+		where id = #{id}
+	</update>
+	<update id="deleteUserById" parameterType="java.lang.Integer">
+		update user set is_valid = 0,is_valid_date =curdate() where id = #{id}
+	</update>
+	<update id="deleteCompanyId" parameterType="java.lang.Integer">
+		update user set is_valid = 0 where company_id = #{companyId}
+	</update>
+	<update id="addStaff" parameterType="com.qrhf.pojo.User">
+			 UPDATE user set password = #{password,jdbcType=INTEGER} WHERE id=#{id}
+	</update>
+	<select id="getByEmail" resultMap="BaseResultMap" parameterType="com.qrhf.pojo.User">
+		select
+		<include refid="Base_Column_List" />
+		from user where email=#{email,jdbcType=VARCHAR}
+	</select>
+	<update id="updatePassword" parameterType="com.qrhf.pojo.User">
+		update user set
+		password=#{password,jdbcType=VARCHAR} where
+		email=#{email,jdbcType=VARCHAR} or phone=#{phone}
+	</update>
+		<update id="upPass" parameterType="com.qrhf.pojo.User">
+		update user set
+		password=#{password,jdbcType=VARCHAR}
+		where id=#{id,jdbcType=INTEGER}
+	</update>
+	<update id="deleteUserByDepartmentId" parameterType="java.lang.String">
+		update user set department_id = NULL where department_id in (${departmentIds}) 
+ 	</update>
+	<select id="checkLoginName" resultMap="BaseResultMap" parameterType="com.qrhf.pojo.User">
+		select
+		<include refid="Base_Column_List" />
+		from user where login_name = #{loginName}
+	</select>
+	<update id="updateUserDepartment" parameterType="java.lang.Integer">
+		update user set department_id = #{departmentId} where id = #{userId}
+	</update>
+	
+	<select id="selectPasswrod" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		select password from user where id=#{id,jdbcType=INTEGER}
+	</select>
+	
+	<select id="selectResource" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select sys_role_id from user where id=#{userId,jdbcType=INTEGER}
+	</select>
+	
+	<select id="selectInvestorsId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			u.id
+		FROM
+			USER u,
+			sys_role sr
+		WHERE
+			u.company_id = #{companyId}
+		AND u.sys_role_id = sr.id
+		and sr.`code`="TZR"
+	</select>
+	<select id="getUserRoleId" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+			COUNT(sr.`code`) number
+		FROM
+			`user` u
+			 LEFT JOIN sys_role sr ON sr.id = u.sys_role_id
+			 AND sr.`code` = 'TZRDB'
+		WHERE
+			u.id = #{userId}
+		AND u.is_valid = 1
+	</select>
+	<select id="findUserTree"  parameterType="java.lang.Integer" resultType="com.qrhf.vo.Node">
+		SELECT
+			(SELECT co.id FROM company co WHERE co.id = #{companyId} AND co.is_valid = 1) id,
+			(SELECT c. NAME NAME FROM company c WHERE c.id = #{companyId} AND c.is_valid = 1) text,
+			 NULL parentId,
+			 'd' grade
+		FROM DUAL UNION
+		SELECT
+			u.id id,
+			u.user_name NAME,
+			CASE
+			WHEN u.department_id =- 1 THEN
+			(SELECT co.id FROM company co WHERE co.id = #{companyId} AND co.is_valid = 1) ELSE u.department_id END AS parentId,
+			'c' grade
+		FROM
+				`user` u
+		WHERE
+			u.company_id = #{companyId}
+			AND u.is_valid = 1
+			AND u.id NOT IN (SELECT u.id id FROM sys_role sr LEFT JOIN `user` u ON sr.id = u.sys_role_id WHERE sr.company_id = #{companyId} AND sr.is_valid = 1 AND sr.code='TZRDB')
+		UNION ALL
+		SELECT
+			d.id id,
+			d. NAME NAME,
+			(SELECT co.id FROM company co WHERE co.id = #{companyId} AND co.is_valid = 1) parentId,
+			'd' grade
+		FROM
+			department d
+		WHERE
+			d.company_id = #{companyId}
+			AND d.is_valid = 1
+	</select>
+	<update id="deleteUserSysRole" parameterType="java.lang.Integer">
+		update user set is_valid = 0 where id = #{userId}
+	</update>	
+	<update id="getUserIdUpdate" parameterType="com.qrhf.pojo.User">
+		UPDATE `user` u SET  u.sys_role_id=(SELECT sr.id sysRoleId FROM sys_role sr WHERE sr.company_id=#{companyId} AND sr.`code` ='TZRDB' AND sr.is_valid=1) WHERE u.id=#{userId}
+	</update>
+	<select id="getUserPushTimes" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		SELECT
+			COUNT(sr.`code`) codeNumber, 
+			case when push_times is null then 0 else push_times end AS pushTimes
+		FROM
+			`user` u
+			 LEFT JOIN sys_role sr ON sr.id = u.sys_role_id
+		AND sr.`code` IN ('TZRDB', 'TZR')
+		WHERE
+			u.id = #{userId}
+		AND u.is_valid = 1
+	</select>
+	<update id="updateUserAnimation" parameterType="com.qrhf.pojo.User">
+		UPDATE `user`
+			SET push_times = (CASE WHEN push_times IS NULL THEN 1 ELSE push_times + 1 END)
+		WHERE
+			id = #{userId}
+			AND is_valid = 1
+	</update>
+	<update id="addUserTimeLength" parameterType="java.lang.String">
+		UPDATE 
+			USER
+		SET 
+			expiry_date = DATE_SUB(expiry_date,INTERVAL (select -time_length from payment_order_user where payment_order_id = #{paymentOrderId} GROUP BY payment_order_id) month ),is_payment=1
+		WHERE
+			id in (
+				SELECT
+					user_id
+				FROM
+					payment_order_user
+				WHERE
+					payment_order_id = #{paymentOrderId}) 
+	</update>
+	<select id="findAllUserForCompany" resultType="com.qrhf.pojo.User" parameterType="java.lang.Integer">
+		select 
+			u.id id,
+			u.company_id companyId,
+			u.department_id departmentId,
+			u.user_name userName,
+			sr.`name` roleName,
+			sr.`code` code,
+			u.is_valid isValid,
+			u.create_date createDate,
+			u.expiry_date ExpiryDate,
+			r.orderby
+		from 
+			user u 
+		LEFT JOIN 
+			sys_role sr ON sr.id =u.sys_role_id 
+		LEFT JOIN 
+			role r ON r.`code` =sr.`code`
+		where 
+			u.company_id =#{companyId} 
+		and u.is_valid = 1 
+		order by case when r.orderby is null then sr.id  ELSE r.orderby end
+	</select> 
+	<select id="userExpirationDate" resultType="com.qrhf.pojo.User" parameterType="Map">
+		select 
+			u.id id,
+			u.company_id companyId,
+			u.department_id departmentId,
+			u.user_name userName,
+			u.is_valid isValid,
+			u.create_date createDate,
+			u.expiry_date ExpiryDate,
+			c.name companyName
+		from 
+			user u,
+			company c
+		where 
+			u.is_valid = 1 
+		and c.is_valid = 1
+		and u.company_id = c.id
+		<if test="companyName!=null">
+		and c.name like #{companyName}
+		</if>
+			order by u.company_id,u.expiry_date
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<select id="companyInformation" resultType="com.qrhf.pojo.User" parameterType="Map">
+		SELECT
+			u.id id,
+			u.company_id companyId,
+			u.department_id departmentId,
+			u.user_name userName,
+			u.is_valid isValid,
+			u.create_date createDate,
+			u.expiry_date ExpiryDate,
+			c. NAME companyName,
+			CASE
+			WHEN u.phone IS NULL THEN
+				u.email
+			ELSE
+				u.phone
+			END AS phoneOrEmail
+		FROM
+			USER u,
+			company c,
+			sys_role sr
+		WHERE
+			u.is_valid = 1
+		AND c.is_valid = 1
+		AND u.company_id = c.id
+		AND sr.id = u.sys_role_id
+		AND u.sys_role_id IN (
+			SELECT
+				sr.id
+			FROM
+				sys_role sr
+			WHERE
+				sr.`code` = 'tzrdb'
+		)
+		<if test="companyName!=null">
+		and c.name like #{companyName}
+		</if>
+			order by u.company_id,u.expiry_date
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<update id="updateUserExpiryDate">
+		UPDATE `user` SET expiry_date=#{expiryDate} WHERE company_id=#{companyId} 
+	</update>
+	<select id="selectUserExpiryDate"  resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT DATEDIFF(expiry_date,CURDATE()) expiryDate FROM `user` WHERE id=#{userId}
+	</select>
+	<select id="findUserExpiryDate" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.User">
+		SELECT expiry_date userExpiryDate FROM `user` WHERE id=#{userId}
+	</select>
+	<select id="findUserExpires"  parameterType="java.lang.Integer" resultType="com.qrhf.pojo.User">
+		SELECT
+			u.company_id companyId,
+			u.phone phone,
+			u.email email,
+			u.is_payment isPayment,
+			threeU.threeName threeName,
+			sevenU.sevenName sevenName,
+			threeU.threeExpiryDate threeExpiryDate,
+			sevenU.sevenExpiryDate sevenExpiryDate 
+		FROM
+			(
+		SELECT
+			u.phone,
+			u.email,
+			u.company_id,
+			u.is_payment 
+		FROM
+			`user` u
+			LEFT JOIN sys_role sr ON sr.id = u.sys_role_id 
+		WHERE
+			sr.`code` = 'TZRDB' 
+			AND u.is_valid = 1 
+			) u
+			INNER JOIN (
+		SELECT
+			u.company_id,
+			u.is_payment,
+			u.expiry_date 
+		FROM
+			USER u 
+		WHERE
+			u.is_valid = 1 
+			AND (
+			DATE_SUB( u.expiry_date, INTERVAL 7 DAY ) = DATE( CURDATE( ) ) 
+			OR DATE_SUB( u.expiry_date, INTERVAL 3 DAY ) = DATE( CURDATE( ) ) 
+			) 
+		GROUP BY
+			u.company_id 
+			) uu ON uu.company_id = u.company_id
+			LEFT JOIN (
+		SELECT
+			u.company_id,
+			u.is_payment,
+			u.expiry_date,
+			GROUP_CONCAT( u.user_name ) sevenName,
+			u.expiry_date sevenExpiryDate 
+		FROM
+			USER u 
+		WHERE
+			u.is_valid = 1 
+			AND DATE_SUB( u.expiry_date, INTERVAL 7 DAY ) = DATE( CURDATE( ) ) 
+		GROUP BY
+			u.company_id 
+			) sevenU ON sevenU.company_id = u.company_id
+			LEFT JOIN (
+		SELECT
+			u.company_id,
+			u.is_payment,
+			u.expiry_date,
+			GROUP_CONCAT( u.user_name ) threeName,
+			u.expiry_date threeExpiryDate 
+		FROM
+			USER u 
+		WHERE
+			u.is_valid = 1 
+			AND DATE_SUB( u.expiry_date, INTERVAL 3 DAY ) = DATE( CURDATE( ) ) 
+		GROUP BY
+			u.company_id 
+			) threeU ON threeU.company_id = u.company_id	
+	</select>
+	<select id="selectUser"  parameterType="java.lang.Integer" resultType="com.qrhf.pojo.User">
+		select u.id id,u.user_name userName from user u where u.company_id = #{companyId} and u.is_valid = 1 order by u.sys_role_id,u.department_id
+	</select>
+</mapper>

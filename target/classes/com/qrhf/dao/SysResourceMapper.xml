@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SysResourceMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.SysResource">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="sys_resource" property="sysResource" jdbcType="INTEGER" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="status" property="status" jdbcType="INTEGER" />
+		<result column="method" property="method" jdbcType="VARCHAR" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+		<result column="alias" property="alias" jdbcType="VARCHAR"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id, name, sys_resource, code,
+		is_valid,status,method,is_valid_date,alias
+	</sql>
+	<select id="getParentResoureList" resultType="com.qrhf.vo.Node" parameterType="Map">
+		 select -1 id,'权限' text,null parentId,null orderby from dual
+		union
+		select id id,name text,sys_resource parentId,orderby orderby from sys_resource sr where sr.is_valid = 1 and sr.is_control = 1 order by orderby
+	</select>
+	<select id="getParentRangeList" resultType="com.qrhf.vo.Node" parameterType="Map">
+	 select -1 id,'权限' text,null parentId,null orderby from dual
+		union
+		select id id,name text,sys_resource parentId,orderby orderby from sys_resource sr where sr.is_valid = 1 and sr.is_control = 1 order by orderby
+	</select>
+	<select id="queryChildByResource" resultType="com.qrhf.pojo.SysResource"
+		parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Column_List" />
+		from sys_resource where sys_resource=#{sysResource} and is_valid='1' and sr.is_control = 1 
+		ORDER BY id
+	</select>
+	<select id="getParenResourceByUserId" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		SELECT
+			sr.id id,
+			sr.`name` name,
+			sr.sys_resource sysResource,
+			sr.method method
+		from
+			sys_resource sr,
+			sys_role_resource srr,
+			`user` u
+		WHERE
+				sr.id=srr.sys_resource 
+			AND u.sys_role_id = srr.sys_role
+			AND sr.is_valid=1 
+			AND sr.`status`=0 
+			AND sr.is_control = 1 
+			AND u.id=#{id} 
+		ORDER BY sr.sys_resource,sr.orderby
+	</select>
+	<select id="getParenResourceForBoss" resultType="com.qrhf.pojo.SysResource">
+		SELECT
+			sr.id id,
+			sr.`name` name,
+			sr.sys_resource sysResource,
+			sr.method method
+		from
+			sys_resource sr
+		WHERE
+				sr.is_valid=1 
+			AND sr.`status`=0 
+			AND sr.is_control = 1 
+		ORDER BY sr.sys_resource,sr.orderby
+	</select>
+	<select id="getResourceStatusByUserId" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		SELECT
+			sr.id,
+			sr.`name`,
+			sr.sys_resource,
+			sr.method
+		FROM
+			sys_resource sr,
+			sys_role_resource srr,
+			`user` u
+		WHERE
+				sr.id = srr.sys_resource
+			AND u.sys_role_id = srr.sys_role
+			AND sr.is_valid = 1
+			AND sr.sys_resource = #{pageId}
+			AND sr.`status` = 2
+			AND sr.is_control = 1 
+			AND u.id = #{id}
+		ORDER BY sr.id
+	</select>
+	<select id="findButtons" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		SELECT DISTINCT
+			sr.id,
+			sr.`name`,
+			sr.sys_resource sysResource,
+			sr.method,
+			sr.status,
+			tea.record_id recordId,
+			sr.alias alias
+		FROM
+			sys_role_resource srr,
+			`user` u,sys_resource sr
+			LEFT JOIN temporary_authority tea ON sr.id=tea.sys_resource_id AND user_id=#{userId} AND tea.is_valid=1
+		WHERE
+			(sr.id = srr.sys_resource
+			<if test="roleCode=='TZRDB'">
+				AND sr.id not in (39,200)   
+			</if>
+			AND u.sys_role_id = srr.sys_role
+			AND sr.is_valid = 1 
+			AND sr.is_control = 1 
+			AND sr.sys_resource = #{pageId}
+			AND u.id = #{userId})
+			<if test="pageId==2">
+				OR(sr.`code`= 1 AND u.sys_role_id = srr.sys_role AND sr.id = srr.sys_resource AND u.id = #{userId})
+			</if>
+			OR(sr.id in (select sys_resource_id from temporary_authority ta where ta.user_id = #{userId} and ta.page_Id = #{pageId} and ta.status = 1 and ta.is_valid = 1))
+			OR(sr.status = 3 AND sr.sys_resource = #{pageId})
+		ORDER BY sr.orderby
+	</select>
+	<select id="findButtonsForBoss" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		SELECT DISTINCT
+			sr.id,
+			sr.`name`,
+			sr.sys_resource sysResource,
+			sr.method,
+			sr.status,
+			0 recordId,
+			sr.alias alias
+		FROM
+			sys_resource sr
+		WHERE
+			(
+				sr.id not in (39,200)   
+			AND sr.is_valid = 1 
+			AND sr.is_control = 1 
+			AND sr.sys_resource = #{pageId})
+			<if test="pageId==2">
+				OR(sr.`code`= 1)
+			</if>
+			OR(sr.status = 3 AND sr.sys_resource = #{pageId})
+		ORDER BY sr.orderby
+	</select>
+	<select id="findTemporaryAuthorityList" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		select s.id,s.name,s.alias from sys_resource s where s.id in (
+			select tar.sys_resource from temporary_authority_range tar where tar.sys_role = (select u.sys_role_id from user u where u.id=#{userId})
+		) and s.id not in(
+			select sys_resource_id from temporary_authority ta where ta.user_id =#{userId} and ta.page_Id = #{pageId} and ta.status = 1 and ta.is_valid = 1
+		) and s.id not in (
+			select srr.sys_resource from sys_role_resource srr where srr.sys_role = (select u.sys_role_id from user u where u.id=#{userId})
+		) 
+		<if test="pageId==2">
+			AND (sys_resource=2 OR sys_resource=45 or sys_resource=46 OR `code`=1)
+		</if>
+		<if test="pageId!=2">
+			AND (sys_resource=#{pageId})
+		</if>
+	</select>
+	<select id="getChildResourceBySysResource" resultType="com.qrhf.pojo.SysResource"
+		parameterType="java.lang.Integer">
+		select b.id,b.`name`,b.sys_resource,b.is_valid,b.method
+		from (
+		SELECT sr.id,sr.`name`,sr.sys_resource,sr.is_valid,sr.method
+		from
+		sys_resource
+		sr,sys_role_resource srr,sys_role r,`user` u
+		WHERE
+		sr.id=srr.sys_resource AND srr.sys_role=r.id AND u.sys_role_id=r.id
+		AND sr.is_valid=1 AND sr.is_control = 1 AND sr.sys_resource!=0 AND sr.`status`=0 AND
+		u.id=#{id}
+		) b WHERE
+		b.is_valid=1 AND b.sys_resource=#{sysResource}
+		ORDER BY b.id
+	</select>
+	<insert id="temporaryAuthority" parameterType="com.qrhf.pojo.TemporaryAuthority">
+		insert into temporary_authority
+			(page_Id,sys_Resource_id,record_id,user_id,remark,status,is_valid)
+		values
+			(#{pageId},#{sysResourceId},#{recordId},${userId},#{remark},0,1)	
+	</insert>
+	<update id="deleteTemporaryAuthority">
+		update temporary_authority set is_valid = 0 where user_id = #{userId} and sys_resource_id = #{sysResourceId}
+	</update>
+	<update id="updateTemporaryAuthority">
+		update temporary_authority set 
+		<if test="num==0">
+			is_valid = 0 
+		</if>
+		<if test="num==1">
+			status = 1 
+		</if>
+		where id = #{taId}
+	</update>
+	<select id="findTemporaryAuthorityVOList" resultType="com.qrhf.vo.TemporaryAuthorityVO" parameterType="java.lang.Integer">
+		SELECT
+			ta.id id,
+			(select user_name from user u where u.id = ta.user_id) userName,
+			(select sr.`name` from sys_resource sr where sr.id = ta.page_id) pageName,
+			(select sr.`name` from sys_resource sr where sr.id = ta.sys_resource_id) sysResourceName,
+			ta.remark remark
+		FROM
+			USER u,
+			temporary_authority ta
+		WHERE
+			u.company_id = #{companyId}
+		AND u.id = ta.user_id
+		AND ta.`status` = 0
+		AND ta.is_valid = 1
+		and ta.page_id
+	</select>
+	<select id="findLeftNavSysResource" resultType="com.qrhf.pojo.SysResource" parameterType="java.lang.Integer">
+		select
+			sre.id id,
+			sre.name name,
+			sre.method method
+		from
+			sys_role sr,
+			sys_resource sre,
+			sys_role_resource srr
+		where
+			sr.id = #{sysRoleId}
+		and	sr.id = srr.sys_role
+		and sre.id = srr.sys_resource
+		and sre.status = -1
+		and sre.method &lt;&gt; ''
+		union
+		select 
+			sr.id id,
+			sr.name name,
+			sr.method method
+		from 
+			sys_resource sr
+		where 
+			sr.is_control = 0
+		and sr.status = -1
+	</select>
+	<select id="sysResourceSelected" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+		SELECT
+			tas.orderBy sysResource,
+			tas.sys_resource
+		FROM
+			`temporary_authority _sort` tas,
+			sys_role_resource srr 
+		WHERE
+			srr.sys_role = #{sysRoleId}
+			AND srr.sys_resource = tas.sys_resource
+<!-- 			AND tas.sys_resource not in  -->
+<!-- 			(SELECT id FROM sys_resource WHERE (`status` =0 or `status` =3 or `status` is null) and name !='首页') -->
+<!-- 		SELECT -->
+<!-- 			srr.sys_resource -->
+<!-- 		FROM -->
+<!-- 			sys_role_resource srr  -->
+<!-- 		WHERE -->
+<!-- 			srr.sys_role =#{sysRoleId} -->
+	</select> 
+</mapper>

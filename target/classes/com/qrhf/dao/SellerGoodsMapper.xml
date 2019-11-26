@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.SellerGoodsMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.SellerGoods">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="price" property="price" jdbcType="DECIMAL" />
+		<result column="amount" property="amount" jdbcType="INTEGER" />
+		<result column="seller_id" property="sellerId" jdbcType="INTEGER" />
+		<result column="goods_id" property="goodsId" jdbcType="INTEGER" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="imageUrl" property="imageUrl" jdbcType="VARCHAR" />
+	</resultMap>
+	<sql id="Base_Column_List">
+		id,price,amount,seller_id,goods_id,is_valid,is_valid_date,create_date
+	</sql>
+	
+	<select id="findList" resultType="com.qrhf.pojo.SellerGoods" parameterType="Map">
+		SELECT
+		sg.id,
+		sg.price,
+		sg.amount,
+		sg.seller_id,
+		sg.is_valid,
+		sg.is_valid_date,
+		sg.create_date,
+		sg.goods_id,
+		g.name AS name,
+		g.code AS code,
+		g.type AS type,
+		g.unit AS unit,
+		g.goods_type,
+		s.id AS sellerId
+		FROM
+		goods AS g
+		INNER JOIN seller AS s
+		INNER JOIN seller_goods AS sg 
+		ON sg.goods_id = g.id 
+		AND sg.seller_id = s.id
+		<where>
+			sg.is_valid = 1
+			and sg.seller_id = (select id from seller where user_id = #{userId}) 
+			<if test="goodsType!=null">
+				and g.goods_type = #{goodsType}
+			</if> 
+			<if test="goodsName!=null">
+				and g.name like #{goodsName}
+			</if>
+			<if test="goodsCode!=null">
+				and g.code like #{goodsCode}
+			</if>
+		</where>
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="goodView" resultType="com.qrhf.pojo.SellerGoods" parameterType="Map">
+		SELECT
+		sg.id,
+		sg.price,
+		sg.amount,
+		sg.seller_id,
+		sg.is_valid,
+		sg.imageUrl,
+		sg.goods_id,
+		g.name AS name,
+		g.code AS code,
+		g.type AS type,
+		g.unit AS unit,
+		g.goods_type,
+		s.id AS sellerId
+		FROM
+		goods AS g
+		INNER JOIN seller AS s
+		INNER JOIN seller_goods AS sg 
+		ON sg.goods_id = g.id 
+		AND sg.seller_id = s.id
+		WHERE
+		sg.is_valid = 1
+		and seller_id =#{sellerId}
+		<if test="name!=''and name!=null">
+		 	and g.name like concat('%',#{name},'%')
+		</if>
+		<if test="price1!=''and price1!=null and price2!=''and price2!=null">
+		 	and sg.price between #{price1} and #{price2}
+		</if>
+		
+	</select>
+	
+	<insert id="addGoods" parameterType="com.qrhf.pojo.SellerGoods">
+		insert into seller_goods(price,amount,seller_id,goods_id,is_valid)
+		VALUES(#{price},#{amount},#{sellerId},#{goodsId},1);
+	</insert>
+	
+	<delete id="delGoods" parameterType="Integer">
+		delete from seller_goods where id=#{id}
+	</delete>
+	
+	<select id="toUpdate" parameterType="Integer" resultType="com.qrhf.pojo.SellerGoods">
+		select 
+		sg.id as id,
+		sg.price as price,
+		sg.amount as amount,
+		g.name as name,
+		g.code as code,
+		g.type as type,
+		g.unit as unit
+		from seller_goods sg 
+		LEFT JOIN 
+		goods g 
+		on 
+		sg.goods_id = g.id
+		where sg.id = #{id}
+	</select>
+	
+	<update id="update" parameterType="com.qrhf.pojo.SellerGoods">
+		update seller_goods set price=#{price},amount=#{amount} where id = #{id}
+	</update>
+</mapper>

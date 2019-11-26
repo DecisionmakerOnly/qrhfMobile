@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.CompanyMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Company">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="logo" property="logo" jdbcType="VARCHAR" />
+		<result column="content" property="content" jdbcType="VARCHAR" />
+		<result column="authentication" property="authentication" jdbcType="INTEGER" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DATE" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="share_code" property="shareCode" jdbcType="INTEGER"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id, name, logo, content, authentication, code, is_valid,
+		is_valid_date,create_date,share_code
+	</sql>
+	<select id="loginByCompanyName" resultMap="BaseResultMap"
+		parameterType="com.qrhf.pojo.Company">
+		select
+		<include refid="Base_Column_List" />
+		from company where name=#{name,jdbcType=VARCHAR} 
+	</select>
+	<select id="getById" parameterType="java.lang.Integer"
+		resultType="com.qrhf.pojo.Company">
+		select
+		<include refid="Base_Column_List" />
+		from company where id=#{id}
+	</select>
+	<select id="findList" resultType="com.qrhf.pojo.Company"
+		parameterType="Map">
+		SELECT DISTINCT
+		u.id,
+		u.user_name,
+		c.`name`,
+		c.content
+		FROM
+		company c,
+		`user` u
+		WHERE
+		u.company_id = c.id
+	</select>
+	<insert id="addCompany" parameterType="com.qrhf.pojo.Company">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			SELECT
+			LAST_INSERT_ID()
+		</selectKey>
+		insert into company (name, logo,
+		content, authentication, code,
+		is_valid, is_valid_date,create_date,share_code)
+		values (
+		#{name,jdbcType=VARCHAR},
+		#{logo,jdbcType=VARCHAR},
+		#{content,jdbcType=VARCHAR}, 
+		#{authentication,jdbcType=INTEGER},
+		#{code,jdbcType=VARCHAR},
+		1,
+		#{isValidDate,jdbcType=DATE},
+		curdate(),
+		#{shareCode,jdbcType=INTEGER})
+	</insert>
+	<update id="update" parameterType="com.qrhf.pojo.Company">
+		update company
+		<set>
+			<if test="name != null">
+				name = #{name,jdbcType=VARCHAR},
+			</if>
+			<if test="logo != null">
+				logo = #{logo,jdbcType=VARCHAR},
+			</if>
+			<if test="content != null">
+				content = #{content,jdbcType=VARCHAR},
+			</if>
+			<if test="authentication != null">
+				authentication = #{authentication,jdbcType=INTEGER},
+			</if>
+			<if test="code != null">
+				code = #{code,jdbcType=VARCHAR},
+			</if>
+			<if test="isValid != null">
+				is_valid = #{isValid,jdbcType=INTEGER},
+			</if>
+			<if test="isValidDate != null">
+				is_valid_date = #{isValidDate,jdbcType=DATE},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+	<update id="deleteCompanyById" parameterType="java.lang.Integer">
+		update company set is_valid = 0,is_valid_date = curdate() where id = #{companyId}
+	</update>
+	
+	<select id="findShareCode" resultType="com.qrhf.pojo.Company" parameterType="Map">
+		SELECT
+			c.id id,
+			u.id id,
+			c.`name` companyName,
+			u.user_name userName,
+			c.create_date createDate,
+			c.is_valid isValid
+		FROM
+			company c LEFT JOIN `user` u ON u.login_name =c.share_code
+		WHERE
+			  if(c.share_code,c.share_code,0) 
+		ORDER BY c.create_date desc
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	
+	<select id="checkCode" parameterType="java.lang.String" resultType="com.qrhf.pojo.Company">
+		select * from company where code = #{code}
+	</select>
+	
+	<select id="getCompanyByUserId" parameterType="java.lang.Integer" resultType="com.qrhf.pojo.Company">
+		SELECT
+			c.*
+		FROM
+			company c,
+			USER u
+		WHERE
+			u.company_id = c.id
+		AND u.id = #{userId}
+	</select>
+	
+	
+</mapper>

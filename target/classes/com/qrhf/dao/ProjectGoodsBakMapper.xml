@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.ProjectGoodsBakMapper">
+	
+	<!-- <sql id="findGoodsId">
+		(select id from goods where code = #{item.code}
+		and (project_id = 0 or project_id = #{item.projectId}) )
+	</sql> -->
+	
+	<insert id="insertAll" parameterType="com.qrhf.pojo.ProjectGoods">
+		insert into project_goods_bak (project_Id,goods_Id,as_name,price,amount,total,is_valid,update_type)
+		values
+		<foreach collection="list" item="item" separator=",">
+			(#{item.projectId},
+			(select id from goods where code = #{item.code}and (company_id = 0 or company_id = #{item.companyId})  )
+			,#{item.asName},#{item.price,jdbcType=DOUBLE},#{item.amount,jdbcType=DOUBLE},#{item.total},2,'清')
+		</foreach>
+	</insert>
+	<delete id="deleteProjectGoodsBakProjectId" parameterType="java.lang.Integer">
+		delete from project_goods_bak where project_id=#{projectId}
+	</delete>
+</mapper>

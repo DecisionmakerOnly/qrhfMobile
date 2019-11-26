@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.qrhf.dao.RefundMapper">
+	<resultMap id="BaseResultMap" type="com.qrhf.pojo.Refund">
+		<id column="id" property="id" jdbcType="INTEGER"/>
+		<result column="user_id" property="userId" jdbcType="INTEGER" />
+		<result column="company_id" property="companyId" jdbcType="INTEGER" />
+		<result column="business_id" property="businessId" jdbcType="INTEGER" />
+		<result column="business_type" property="businessType" jdbcType="INTEGER" />
+		<result column="business_table" property="businessTable" jdbcType="VARCHAR" />
+		<result column="create_date" property="createDate" jdbcType="DATE" />
+		<result column="is_valid" property="isValid" jdbcType="INTEGER" />
+		<result column="is_valid_date" property="isValidDate" jdbcType="DOUBLE" />
+		<result column="status" property="status" jdbcType="INTEGER"/>
+	</resultMap>
+	<sql id="Base_Column_List">
+		id id,user_id userId,company_id companyId,business_id businessId,
+		business_type businessType,business_table businessTable,
+		create_date createDate,is_valid isValid,is_valid_date isValidDate,status status
+	</sql>
+	<insert id="add" parameterType="com.qrhf.pojo.Refund">
+		insert into refund (
+			user_id,
+			company_id,
+			business_id,
+			business_type,
+			business_table,
+			is_valid,
+			status
+			)
+		values (
+			#{userId,jdbcType=INTEGER},
+			#{companyId,jdbcType=INTEGER},
+			#{businessId,jdbcType=INTEGER},
+			#{businessType,jdbcType=INTEGER},
+			'coupon',
+			#{isValid,jdbcType=INTEGER},
+			#{status,jdbcType=INTEGER}
+		 )
+	</insert>
+	<select id="findList" resultType="com.qrhf.pojo.Refund" parameterType="Map">
+		SELECT
+			rea.user_name userName,
+			rea.bank_name bankName,
+			rea.card_number cardNumber,
+			rea.phone,
+			ref.id id,
+			ref.business_type businessType,
+			ref.`status`
+		FROM
+			refund ref,
+			real_info rea
+		WHERE
+			ref.user_id = rea.user_id
+		AND ref.business_id = rea.coupon_id
+		AND ref.is_valid = 1
+		AND ref.user_id = #{userId}
+		<if test="a!=null">
+			LIMIT #{a},#{b} 
+		</if>
+	</select>
+	<select id="selectAll" resultType="com.qrhf.pojo.Refund" parameterType="Map">
+		SELECT
+			rea.user_name userName,
+			rea.bank_name bankName,
+			rea.card_number cardNumber,
+			rea.phone,
+			rea.withdraw_money withdrawMoney,
+			ref.id id,
+			ref.business_type businessType,
+			ref.`status`,
+			u.user_name userNames,
+			c.`name` companyName
+		FROM
+			refund ref,
+			real_info rea,
+			user u,
+			company c
+		WHERE
+			ref.user_id = rea.user_id 
+			AND u.id= ref.user_id
+			AND c.id=ref.company_id
+			AND ref.business_id = rea.coupon_id
+			AND ref.is_valid = 1
+		<if test="a!=null">
+			LIMIT #{a},#{b}
+		</if>
+	</select>
+	<update id="updateStatus" parameterType="com.qrhf.pojo.Refund">
+		update refund set status = #{status} where id = #{id}
+	</update>
+</mapper>
+ 
